@@ -101,6 +101,14 @@ export const en: Catalog<typeof es> = {
     submit: 'Save password',
     goLogin: 'Go to sign in',
   },
+  returnToApp: {
+    title: 'Back to the app',
+    registered: 'Your account is ready. Open MyTaskLists and sign in with your email and password.',
+    passwordChanged: 'Your password changed. Open MyTaskLists and sign in with the new password.',
+    signedIn: 'You are signed in on the web. Open MyTaskLists to continue in the app.',
+    open: 'Open MyTaskLists',
+    stayOnWeb: 'Stay on the web',
+  },
   verifyEmail: {
     invalidLink: 'The link is invalid.',
     confirmed: 'We confirmed {{email}}.',
@@ -211,6 +219,8 @@ export const en: Catalog<typeof es> = {
     members_other: '{{count}} members',
     notifyTitle: 'Notify me when someone else changes the list',
     notify: 'Notify me',
+    showDates: 'Dates',
+    showDatesTitle: 'Show when each item was added or edited',
     share: 'Share',
     deleteList: 'Delete the list',
     pendingHeading: 'To buy ({{count}})',
@@ -244,6 +254,8 @@ export const en: Catalog<typeof es> = {
     everyHint: 'days after it is marked as bought',
   },
   item: {
+    addedOn: 'Added {{date}}',
+    editedOn: 'Edited {{date}}',
     markPurchased: 'Mark {{name}} as bought',
     every: 'every {{count}} d',
     overdue: 'overdue {{count}} d',

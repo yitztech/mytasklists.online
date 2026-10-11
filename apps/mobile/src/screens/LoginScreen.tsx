@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,25 @@ export function LoginScreen({ navigation }: any) {
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [backFromWeb, setBackFromWeb] = useState(false);
+
+  // La web devuelve aquí con mytasklists://login?email=… al terminar un registro
+  // o un cambio de contraseña pedidos desde la app
+  useEffect(() => {
+    const open = (url: string | null) => {
+      const match = url?.match(/^mytasklists:\/\/login\/?(?:\?(.*))?$/i);
+      if (!match) return;
+      const linked = new URLSearchParams(match[1] ?? '').get('email');
+      if (linked) setEmail(linked);
+      setMfaToken(null);
+      setError(null);
+      setBackFromWeb(true);
+      navigation.navigate('Login');
+    };
+    void Linking.getInitialURL().then(open).catch(() => undefined);
+    const subscription = Linking.addEventListener('url', (event) => open(event.url));
+    return () => subscription.remove();
+  }, [navigation]);
 
   const afterStep = (step: LoginStep) => {
     if (step.status === 'mfa') setMfaToken(step.mfaToken);
@@ -97,6 +117,11 @@ export function LoginScreen({ navigation }: any) {
         </View>
         <Text style={styles.title}>{mfaToken ? t('login.mfaTitle') : t('login.title')}</Text>
         <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
+        {backFromWeb && !mfaToken ? (
+          <Text style={styles.notice} testID="login-back-from-web">
+            {t('login.backFromWeb')}
+          </Text>
+        ) : null}
 
         {mfaToken ? (
           <View testID="mfa-step">
@@ -215,6 +240,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: spacing.xl + spacing.sm,
   },
+  notice: { color: colors.brand, marginBottom: spacing.lg, fontSize: 14, textAlign: 'center', fontWeight: '600' },
   error: { color: colors.danger, marginBottom: spacing.md, fontSize: 13 },
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginVertical: spacing.lg },
   divider: { flex: 1, height: 1, backgroundColor: colors.line },

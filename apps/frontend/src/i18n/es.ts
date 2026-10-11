@@ -100,6 +100,14 @@ export const es = {
     submit: 'Guardar contraseña',
     goLogin: 'Ir a iniciar sesión',
   },
+  returnToApp: {
+    title: 'Vuelve a la app',
+    registered: 'Tu cuenta está lista. Abre MyTaskLists e ingresa con tu correo y tu contraseña.',
+    passwordChanged: 'Tu contraseña cambió. Abre MyTaskLists e ingresa con la contraseña nueva.',
+    signedIn: 'Ya iniciaste sesión en la web. Abre MyTaskLists para seguir en la app.',
+    open: 'Abrir MyTaskLists',
+    stayOnWeb: 'Seguir en la web',
+  },
   verifyEmail: {
     invalidLink: 'El enlace no es válido.',
     confirmed: 'Confirmamos {{email}}.',
@@ -210,6 +218,8 @@ export const es = {
     members_other: '{{count}} integrantes',
     notifyTitle: 'Avisarme cuando alguien más modifique la lista',
     notify: 'Avisarme',
+    showDates: 'Fechas',
+    showDatesTitle: 'Mostrar cuándo se agregó o editó cada elemento',
     share: 'Compartir',
     deleteList: 'Eliminar la lista',
     pendingHeading: 'Por comprar ({{count}})',
@@ -243,6 +253,8 @@ export const es = {
     everyHint: 'días desde que se marque como comprado',
   },
   item: {
+    addedOn: 'Agregado {{date}}',
+    editedOn: 'Editado {{date}}',
     markPurchased: 'Marcar {{name}} como comprado',
     every: 'cada {{count}} d',
     overdue: 'vencido hace {{count}} d',

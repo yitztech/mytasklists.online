@@ -36,6 +36,7 @@ import { AuthenticatedUser } from '../../common/types';
 import { AuthThrottle, SensitiveThrottle } from '../../common/throttle/throttle-profiles';
 import { RequestLocale } from '../../common/decorators/request-locale.decorator';
 import { type Locale, translateMessage } from '../../i18n/locale';
+import { nativeAppOf } from './native-app';
 
 /**
  * Los clientes web (app y panel) mandan `X-Auth-Client: web|dashboard`: su
@@ -96,8 +97,8 @@ export class AuthController {
   }
 
   @Public() @SensitiveThrottle() @Post('registration/request') @HttpCode(200)
-  requestRegistration(@Body() dto: RegistrationRequestDto, @RequestLocale() locale: Locale) {
-    return this.registration.request(dto.email, locale);
+  requestRegistration(@Body() dto: RegistrationRequestDto, @RequestLocale() locale: Locale, @Req() request: FastifyRequest) {
+    return this.registration.request(dto.email, locale, nativeAppOf(request));
   }
   @Public() @AuthThrottle() @Post('registration/validate') @HttpCode(200)
   validateRegistration(@Body() dto: RegistrationTokenDto, @Res({passthrough:true}) reply: FastifyReply) {
@@ -217,8 +218,8 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Envía un enlace para restablecer la contraseña (respuesta genérica)' })
-  async forgotPassword(@Body() dto: ForgotPasswordDto, @RequestLocale() locale: Locale) {
-    const result = await this.auth.forgotPassword(dto.email);
+  async forgotPassword(@Body() dto: ForgotPasswordDto, @RequestLocale() locale: Locale, @Req() request: FastifyRequest) {
+    const result = await this.auth.forgotPassword(dto.email, nativeAppOf(request));
     return { ...result, message: translateMessage(result.message, locale) };
   }
 

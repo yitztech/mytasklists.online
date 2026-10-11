@@ -42,6 +42,7 @@ export const es = {
     or: 'o',
     google: 'Continuar con Google',
     register: '¿Aún no tienes cuenta? Regístrate',
+    backFromWeb: 'Listo. Ingresa con tu correo y tu contraseña.',
   },
   google: {
     noToken: 'Google no devolvió el token',
@@ -91,6 +92,7 @@ export const es = {
     people: '{{count}} personas',
   },
   detail: {
+    showDates: 'Ver fechas de alta y edición',
     loadFailed: 'No se pudo cargar la lista',
     addPlaceholder: 'Agregar producto…',
     repeat: 'Repetir automáticamente',
@@ -108,6 +110,8 @@ export const es = {
     advance: 'Adelantar 14 días',
   },
   item: {
+    addedOn: 'Agregado {{date}}',
+    editedOn: 'Editado {{date}}',
     edit: 'Editar',
     markPurchased: 'Marcar {{name}} como comprado',
     every: 'cada {{count}} d',

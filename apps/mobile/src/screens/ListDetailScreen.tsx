@@ -26,6 +26,9 @@ import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
 import { itemImageForm } from '../utils/item-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SHOW_DATES_KEY = 'lc.mobile.showItemDates';
 
 const PRESETS = [3, 7, 14, 30];
 
@@ -51,6 +54,15 @@ export function ListDetailScreen({ route, navigation }: any) {
   const [showShare, setShowShare] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [showDates, setShowDates] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SHOW_DATES_KEY).then((value) => setShowDates(value === 'true')).catch(() => undefined);
+  }, []);
+  const toggleDates = (value: boolean) => {
+    setShowDates(value);
+    AsyncStorage.setItem(SHOW_DATES_KEY, String(value)).catch(() => undefined);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -273,6 +285,16 @@ export function ListDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
+      <View style={styles.datesRow}>
+        <Text style={styles.recurLabel}>{t('detail.showDates')}</Text>
+        <Switch
+          testID="dates-switch"
+          value={showDates}
+          onValueChange={toggleDates}
+          trackColor={{ true: colors.brand, false: colors.lineStrong }}
+        />
+      </View>
+
       {/* ── Pendientes ───────────────────────────────────────────────── */}
       <SectionLabel>{t('detail.pendingHeading', { count: list.pending.length })}</SectionLabel>
       <View testID="pending-list" style={list.pending.length > 0 ? styles.sheet : undefined}>
@@ -282,6 +304,7 @@ export function ListDetailScreen({ route, navigation }: any) {
             item={item}
             first={index === 0}
             disabled={busy}
+            showDates={showDates}
             onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
             onEdit={setEditingItem}
             onLongPress={(target: Item) =>
@@ -322,6 +345,7 @@ export function ListDetailScreen({ route, navigation }: any) {
                 item={item}
                 first={index === 0}
                 disabled={busy}
+                showDates={showDates}
                 onRestore={(target) => guard(() => itemsApi.restore(target.id))}
                 onClose={(target) => guard(() => itemsApi.close(target.id))}
                 onEdit={setEditingItem}
@@ -399,6 +423,13 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginTop: spacing.md,
     ...shadow.card,
+  },
+  datesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   notifyRow: {
     flexDirection: 'row',

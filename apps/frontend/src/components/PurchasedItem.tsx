@@ -3,10 +3,13 @@ import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { itemDates } from '../utils/item-dates';
 
 interface Props {
   item: Item;
   disabled?: boolean;
+  /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
+  showDates?: boolean;
   onRestore: (item: Item) => void;
   onClose: (item: Item) => void;
   onEdit: (item: Item) => void;
@@ -25,7 +28,7 @@ const relativeDate = (iso: string | null, t: TFunction): string => {
  * Fila de la lista de abajo (productos ya comprados).
  * Se muestran tachados y se quitan manualmente con la "x".
  */
-export function PurchasedItem({ item, disabled, onRestore, onClose, onEdit }: Props) {
+export function PurchasedItem({ item, disabled, showDates, onRestore, onClose, onEdit }: Props) {
   const { t, i18n } = useTranslation();
   const knownUnit=UNITS.find(u=>u.value===item.unit);
   const unitLabel=knownUnit?(i18n.language.startsWith('en')?knownUnit.en:knownUnit.es):item.unit;
@@ -65,6 +68,7 @@ export function PurchasedItem({ item, disabled, onRestore, onClose, onEdit }: Pr
             </span>
           )}
         </div>
+        {showDates && <div className="lc-hint mt-1" data-testid="item-dates">{itemDates(item, t, i18n.language)}</div>}
       </div>
 
       <button className="lc-icon-btn" type="button" onClick={() => onEdit(item)} disabled={disabled} aria-label={`${t('item.edit')}: ${item.name}`} data-testid="item-edit"><i className="bi bi-pencil" aria-hidden="true" /></button>

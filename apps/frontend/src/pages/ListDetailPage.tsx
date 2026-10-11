@@ -29,6 +29,22 @@ export function ListDetailPage() {
   const [showShare, setShowShare] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const reloadTimer = useRef<number | null>(null);
+  const [showDates, setShowDates] = useState(() => {
+    try {
+      return localStorage.getItem('lc.showItemDates') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleDates = () =>
+    setShowDates((current) => {
+      try {
+        localStorage.setItem('lc.showItemDates', String(!current));
+      } catch {
+        /* almacenamiento no disponible */
+      }
+      return !current;
+    });
 
   const load = useCallback(async () => {
     try {
@@ -227,6 +243,21 @@ export function ListDetailPage() {
           </div>
 
           <div className="d-flex flex-wrap align-items-center gap-2">
+            <div className="form-check form-switch mb-0 me-2" title={t('detail.showDatesTitle')}>
+              <input
+                className="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="dates-switch"
+                checked={showDates}
+                onChange={toggleDates}
+                data-testid="dates-switch"
+              />
+              <label className="form-check-label small fw-semibold" htmlFor="dates-switch">
+                {t('detail.showDates')}
+              </label>
+            </div>
+
             <div className="form-check form-switch mb-0 me-2" title={t('detail.notifyTitle')}>
               <input
                 className="form-check-input"
@@ -291,6 +322,7 @@ export function ListDetailPage() {
                 key={item.id}
                 item={item}
                 disabled={busy}
+                showDates={showDates}
                 onPurchase={purchase}
                 onDelete={remove}
                 onAdvanceClock={advanceClock}
@@ -321,6 +353,7 @@ export function ListDetailPage() {
                 key={item.id}
                 item={item}
                 disabled={busy}
+                showDates={showDates}
                 onRestore={restore}
                 onClose={close}
                 onEdit={setEditingItem}

@@ -1,8 +1,8 @@
 import { BillingService } from '../billing/billing.service';
 import type { ServerEvents } from '@lista/contracts';
-import { BadRequestException, Injectable, Logger, NotFoundException, HttpException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, HttpException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import {
   ActivityLog,
   ItemStatus,
@@ -15,7 +15,7 @@ import { ListsService } from '../lists/lists.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RT } from '../realtime/realtime.events';
 import { NotificationsService } from '../notifications/notifications.service';
-import { addDays, ItemView, toItemView } from './item.mapper';
+import { addDays, isInList, itemNameKey, ItemView, toItemView } from './item.mapper';
 import { CreateItemDto, ReorderItemsDto, UpdateItemDto } from './dto/item.dto';
 import { ItemImageStorage } from './item-image.storage';
 
@@ -77,6 +77,36 @@ export class ItemsService {
     }
   }
 
+  /**
+   * Un producto no se puede repetir dentro de la misma lista. Se llama con el
+   * candado de la lista tomado para que dos altas a la vez no se cuelen.
+   */
+  private async assertNotDuplicate(manager: EntityManager, listId: string, name: string, exceptId?: string): Promise<void> {
+    const key = itemNameKey(name);
+    const existing = await manager.find(ListItem, {
+      where: { listId },
+      select: { id: true, name: true, status: true, isRecurring: true, nextActivationAt: true },
+    });
+    const match = existing.find((item) => item.id !== exceptId && isInList(item) && itemNameKey(item.name) === key);
+    if (!match) return;
+    const message =
+      match.status === ItemStatus.PENDING
+        ? 'Ese producto ya está en la lista'
+        : match.status === ItemStatus.PURCHASED
+          ? 'Ese producto ya está en la lista como comprado. Regrésalo a pendientes en lugar de agregarlo otra vez.'
+          : 'Ese producto ya está en la lista y volverá a aparecer cuando toque según su recurrencia';
+    throw new ConflictException({
+      error: 'Conflict',
+      code: 'ITEM_DUPLICATE',
+      message,
+      details: { itemId: match.id, status: match.status },
+    });
+  }
+
+  private lockList(manager: EntityManager, listId: string) {
+    return manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['capacity:items:' + listId]);
+  }
+
   // ── Alta ────────────────────────────────────────────────────────────
   async create(listId: string, userId: string, dto: CreateItemDto): Promise<ItemView> {
     await this.listsService.assertMember(listId, userId, true);
@@ -89,7 +119,8 @@ export class ItemsService {
 
     const now = new Date();
     const item = await this.items.manager.transaction(async manager=>{
-      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))',['capacity:items:'+listId]);
+      await this.lockList(manager, listId);
+      await this.assertNotDuplicate(manager, listId, dto.name);
       await this.billing.assertCapacity(list.ownerId,'items',await manager.count(ListItem,{where:{listId}}));
     const maxOrder = await manager.getRepository(ListItem)
       .createQueryBuilder('item')
@@ -196,7 +227,15 @@ export class ItemsService {
         overdueNotifiedAt: item.overdueNotifiedAt, dueAt: item.dueAt, nextActivationAt: item.nextActivationAt,
       } : {}),
     };
-    if (Object.keys(changes).length) await this.items.update(itemId, changes);
+    if (Object.keys(changes).length) {
+      await this.items.manager.transaction(async (manager) => {
+        if (dto.name !== undefined) {
+          await this.lockList(manager, item.listId);
+          await this.assertNotDuplicate(manager, item.listId, item.name, itemId);
+        }
+        await manager.update(ListItem, itemId, { ...changes, editedAt: new Date() });
+      });
+    }
     const view = toItemView(await this.loadItem(itemId));
     await this.afterChange(item.listId, RT.ITEM_UPDATED, { item: view, actorId: userId });
 
@@ -236,7 +275,7 @@ export class ItemsService {
           JOIN shopping_lists l ON l.id=i.list_id WHERE l.owner_id=$1 AND i.id<>$2`, [list.ownerId, itemId]);
         if (Number(bytes) + imageBytes > Number(process.env.IMAGE_MAX_BYTES_PER_ACCOUNT || 104857600))
           throw new HttpException('Se alcanzó el límite de almacenamiento de imágenes de la cuenta.', 413);
-        await repo.update(itemId, { imageKey, imageBytes });
+        await repo.update(itemId, { imageKey, imageBytes, editedAt: new Date() });
         return current.imageKey;
       });
     }
@@ -255,7 +294,7 @@ export class ItemsService {
       const repo = manager.getRepository(ListItem);
       const current = await repo.findOne({ where: { id: itemId }, lock: { mode: 'pessimistic_write' }, loadEagerRelations: false });
       if (!current) throw new NotFoundException('El producto no existe');
-      await repo.update(itemId, { imageKey: null, imageBytes: 0 });
+      await repo.update(itemId, { imageKey: null, imageBytes: 0, editedAt: new Date() });
       return current.imageKey;
     });
     if (previous) await this.imageStorage.remove(previous).catch(() => undefined);

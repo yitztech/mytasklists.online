@@ -87,6 +87,11 @@ export const ERRORS_EN: Record<string, string> = {
   'Solo puedes consultar esta lista': 'You can only view this list',
   'Esta lista ya es tuya': 'This list is already yours',
   'El producto no existe': 'The item does not exist',
+  'Ese producto ya está en la lista': 'That item is already on the list',
+  'Ese producto ya está en la lista como comprado. Regrésalo a pendientes en lugar de agregarlo otra vez.':
+    'That item is already on the list as bought. Move it back to pending instead of adding it again.',
+  'Ese producto ya está en la lista y volverá a aparecer cuando toque según su recurrencia':
+    'That item is already on the list and will come back when its recurrence is due',
   'Indica el correo o el id de la persona': "Enter the person's email or id",
   'No encontramos a esa persona. Debe registrarse antes de que puedas compartirle la lista.':
     'We could not find that person. They need to sign up before you can share the list with them.',
