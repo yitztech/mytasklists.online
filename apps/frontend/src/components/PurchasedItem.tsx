@@ -52,10 +52,10 @@ export function PurchasedItem({ item, disabled, showDates, onRestore, onClose, o
 
       <div className="flex-grow-1 min-w-0">
         {item.imageUrl && <img src={`${API_URL}${item.imageUrl}`} alt="" loading="lazy" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, marginBottom: 6 }} />}
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <span className="lc-item-name text-truncate" data-testid="purchased-name">
-            {item.name}
-          </span>
+        <div className="lc-item-name" data-testid="purchased-name">
+          {item.name}
+        </div>
+        <div className="lc-item-meta">
           {(Number(item.quantity)!==1||item.unit!=='pza')&&<span className="lc-hint" data-testid="purchased-quantity">{Number(item.quantity)} {unitLabel}</span>}
           <span className="lc-hint" data-testid="purchased-meta">
             {item.purchasedByName ? `${item.purchasedByName} · ` : ''}
