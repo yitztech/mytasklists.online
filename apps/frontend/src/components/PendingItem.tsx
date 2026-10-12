@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { itemDates } from '../utils/item-dates';
 
 interface Props {
   item: Item;
   disabled?: boolean;
+  /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
+  showDates?: boolean;
   onPurchase: (item: Item) => void;
   onDelete: (item: Item) => void;
   onAdvanceClock: (item: Item, days: number) => void;
@@ -24,7 +27,7 @@ const formatQuantity = (item: Item, language: string): string =>
  *  · azul  → recurrente dentro de su plazo
  *  · rojo  → recurrente vencido (pasó su plazo sin comprarse)
  */
-export function PendingItem({ item, disabled, onPurchase, onDelete, onAdvanceClock, onEdit }: Props) {
+export function PendingItem({ item, disabled, showDates, onPurchase, onDelete, onAdvanceClock, onEdit }: Props) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState(false);
 
@@ -100,6 +103,7 @@ export function PendingItem({ item, disabled, onPurchase, onDelete, onAdvanceClo
           )}
         </div>
         {item.note && <div className="lc-hint mt-1">{item.note}</div>}
+        {showDates && <div className="lc-hint mt-1" data-testid="item-dates">{itemDates(item, t, i18n.language)}</div>}
       </div>
 
       <div className="d-flex align-items-center gap-1 flex-shrink-0">

@@ -28,6 +28,7 @@ import { TokenPair, TokenService } from './token.service';
 import { OAuthService, SocialProfile } from './oauth.service';
 import { MfaService } from './mfa.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { appFragment, type NativeApp } from './native-app';
 
 export interface AuthResult extends TokenPair {
   user: PublicUser;
@@ -234,7 +235,7 @@ export class AuthService {
 
   // ── Recuperación de contraseña ───────────────────────────────────────
   /** Siempre responde lo mismo, exista o no el correo, para no revelar cuentas */
-  async forgotPassword(email: string): Promise<{ ok: true; message: string }> {
+  async forgotPassword(email: string, app: NativeApp | null = null): Promise<{ ok: true; message: string }> {
     const user = await this.users.findByEmail(email);
     if (user?.isActive) {
       const ttl = this.config.get<number>('auth.passwordResetTtlSeconds', 3600);
@@ -248,7 +249,7 @@ export class AuthService {
       await this.cache.set(CacheService.passwordResetKey(tokenHash), { userId: user.id }, ttl);
       await this.cache.set(CacheService.passwordResetUserKey(user.id), tokenHash, ttl);
 
-      const url = `${this.publicUrl}/app/reset-password#token=${token}`;
+      const url = `${this.publicUrl}/app/reset-password#token=${token}${appFragment(app)}`;
       this.mail.sendInBackground(
         user.email,
         resetPasswordTemplate(user.locale, user.fullName, url, Math.round(ttl / 60)),

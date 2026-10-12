@@ -1,9 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
-// Exact, expiring toolchain exception: upstream has no patched release as of 2026-10-01.
-// It does not suppress new advisories, package changes or the backend dependency audit.
-const accepted = new Map([['GHSA-86w9-cpqp-85rv', {name:'node-forge', until:'2026-10-31'}]]);
+// Exact, expiring toolchain exceptions: upstream has no patched release (node-forge as of 2026-10-01,
+// braces as of 2026-10-11; braces only parses Metro/Expo CLI build globs, never app input).
+// They do not suppress new advisories, package changes or the backend dependency audit.
+const accepted = new Map([
+  ['GHSA-86w9-cpqp-85rv', {name:'node-forge', until:'2026-10-31'}],
+  ['GHSA-vfj7-8cjw-p6xm', {name:'braces', until:'2026-10-31'}],
+]);
 let failed=false;
 for (const cwd of ['.', 'apps/mobile']) {
   const result=spawnSync('npm',['audit','--omit=dev','--json'],{cwd,encoding:'utf8'});

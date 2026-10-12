@@ -5,6 +5,8 @@ import { AuthShell } from '../components/AuthShell';
 import { authApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { ReturnToApp } from '../components/ReturnToApp';
+import { rememberNativeApp } from '../utils/native-app';
 
 /** Lee el token del fragmento (#token=…): así no queda en los logs del proxy */
 const readToken = (): string | null =>
@@ -14,6 +16,8 @@ export function ResetPasswordPage() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const [token] = useState(readToken);
+  // Leído antes de limpiar el fragmento: la recuperación se pidió desde la app nativa
+  const [nativeApp] = useState(rememberNativeApp);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +46,8 @@ export function ResetPasswordPage() {
       setSubmitting(false);
     }
   };
+
+  if (done && nativeApp) return <ReturnToApp app={nativeApp} message={t('returnToApp.passwordChanged')} />;
 
   return (
     <AuthShell>

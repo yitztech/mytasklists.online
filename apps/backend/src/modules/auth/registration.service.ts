@@ -13,6 +13,7 @@ import { CacheService } from '../../redis/cache.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RT } from '../realtime/realtime.events';
 import { toMemberView } from '../lists/list.mapper';
+import { appFragment, type NativeApp } from './native-app';
 
 const digest = (token: string) => createHash('sha256').update(token).digest('hex');
 const invalid = () => new BadRequestException('El enlace no es válido o ya expiró');
@@ -21,7 +22,7 @@ export class RegistrationService {
   private readonly logger = new Logger(RegistrationService.name);
   constructor(private readonly db: DataSource, private readonly mail: MailService, private readonly config: ConfigService,
     private readonly cache: CacheService, private readonly realtime: RealtimeGateway, private readonly outbox: MailOutboxService) {}
-  async request(email: string, locale: Locale): Promise<{ ok: true; cooldownSeconds: number }> {
+  async request(email: string, locale: Locale, app: NativeApp | null = null): Promise<{ ok: true; cooldownSeconds: number }> {
     const started = Date.now();
     // Availability is configuration-only; temporary SMTP outages are retried by the outbox.
     this.mail.assertConfigured();
@@ -41,7 +42,7 @@ export class RegistrationService {
         const ttl = Number(process.env.REGISTRATION_TTL_SECONDS || 1800);
         if (!exists) {
           const base = this.config.get<string>('publicUrl', 'http://localhost:8080');
-          await this.outbox.enqueue(m, email, registrationTemplate(locale, `${base}/app/register/complete#token=${token}`, Math.ceil(ttl / 60)), 'registration', email, digest(token));
+          await this.outbox.enqueue(m, email, registrationTemplate(locale, `${base}/app/register/complete#token=${token}${appFragment(app)}`, Math.ceil(ttl / 60)), 'registration', email, digest(token));
         }
         await m.query(`UPDATE registration_requests SET token_hash=$2, locale=$3, expires_at=now()+($4 * interval '1 second'),
           consumed_at=NULL,last_sent_at=now(),window_start=$5,attempts=$6 WHERE email=$1`,

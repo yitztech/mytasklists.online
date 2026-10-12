@@ -6,6 +6,7 @@ import { Badge } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { itemDates } from '../utils/item-dates';
 
 interface Props {
   item: Item;
@@ -15,13 +16,15 @@ interface Props {
   /** Primera fila de la hoja: sin filete arriba */
   first?: boolean;
   onEdit: (item: Item) => void;
+  /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
+  showDates?: boolean;
 }
 
 /**
  * Producto pendiente. El estado se lee en el aro del check y en la etiqueta:
  * gris (una sola vez), etiqueta amarilla (recurrente al día) y rojo (vencido).
  */
-export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit }: Props) {
+export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit, showDates }: Props) {
   const { t, i18n } = useTranslation();
 
   return (
@@ -64,6 +67,7 @@ export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit
           ) : null}
         </View>
         {item.note ? <Text style={styles.meta} numberOfLines={2}>{item.note}</Text> : null}
+        {showDates ? <Text style={styles.meta} testID="item-dates">{itemDates(item, t, i18n.language)}</Text> : null}
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={`${t('item.edit')}: ${item.name}`} onPress={() => onEdit(item)} disabled={disabled} style={styles.edit}><Text style={{ color: colors.brand, fontWeight: '700' }}>{t('item.edit')}</Text></Pressable>
     </View>

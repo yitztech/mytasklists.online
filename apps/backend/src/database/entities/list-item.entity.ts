@@ -122,4 +122,8 @@ export class ListItem {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  /** Última edición hecha por una persona; null si no se ha editado desde que se agregó */
+  @Column({ name: 'edited_at', type: 'timestamptz', nullable: true })
+  editedAt: Date | null;
 }

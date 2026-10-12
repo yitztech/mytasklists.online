@@ -42,6 +42,7 @@ export const en: Catalog<typeof es> = {
     or: 'or',
     google: 'Continue with Google',
     register: "Don't have an account? Sign up",
+    backFromWeb: 'All set. Sign in with your email and password.',
   },
   google: {
     noToken: 'Google did not return a token',
@@ -91,6 +92,7 @@ export const en: Catalog<typeof es> = {
     people: '👥 {{count}}',
   },
   detail: {
+    showDates: 'Show added and edited dates',
     loadFailed: 'Could not load the list',
     addPlaceholder: 'Add an item…',
     repeat: 'Repeat automatically',
@@ -108,6 +110,8 @@ export const en: Catalog<typeof es> = {
     advance: 'Move forward 14 days',
   },
   item: {
+    addedOn: 'Added {{date}}',
+    editedOn: 'Edited {{date}}',
     edit: 'Edit',
     markPurchased: 'Mark {{name}} as bought',
     every: 'every {{count}} d',

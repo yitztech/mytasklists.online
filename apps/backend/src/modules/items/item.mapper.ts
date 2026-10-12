@@ -23,6 +23,20 @@ export const isItemOverdue = (item: ListItem, now: Date = new Date()): boolean =
   item.dueAt !== null &&
   now.getTime() > new Date(item.dueAt).getTime();
 
+/**
+ * Nombre comparable para detectar productos repetidos: sin mayúsculas, tildes
+ * ni espacios de más ("  Café " y "cafe" son el mismo producto).
+ */
+export const itemNameKey = (name: string): string =>
+  name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+/**
+ * Un producto sigue "en la lista" mientras está pendiente, comprado o, si es
+ * recurrente, archivado con una reaparición programada.
+ */
+export const isInList = (item: Pick<ListItem, 'status' | 'isRecurring' | 'nextActivationAt'>): boolean =>
+  item.status !== ItemStatus.ARCHIVED || (item.isRecurring && item.nextActivationAt !== null);
+
 /** La forma pública del producto vive en el contrato compartido con los clientes */
 export type ItemView = Item;
 
@@ -56,6 +70,7 @@ export const toItemView = (item: ListItem, now: Date = new Date()): ItemView => 
     sortOrder: item.sortOrder,
     createdAt: new Date(item.createdAt).toISOString(),
     updatedAt: new Date(item.updatedAt).toISOString(),
+    editedAt: item.editedAt ? new Date(item.editedAt).toISOString() : null,
     isOverdue: overdue,
     daysOverdue: overdue && dueAt ? Math.max(1, daysBetween(dueAt, now)) : 0,
     daysUntilDue: dueAt && !overdue ? daysAhead(now, dueAt) : null,

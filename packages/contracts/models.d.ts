@@ -81,6 +81,8 @@ export interface Item {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  /** Última edición hecha por una persona; null si no se ha editado desde que se agregó. */
+  editedAt: string | null;
   // ── campos calculados que consume la interfaz ──
   isOverdue: boolean;
   daysOverdue: number;

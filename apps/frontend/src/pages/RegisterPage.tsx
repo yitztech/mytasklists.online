@@ -5,7 +5,8 @@ import { AuthShell } from '../components/AuthShell';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
-import { SocialButtons } from '../components/SocialButtons';
+import { ReturnToApp } from '../components/ReturnToApp';
+import { rememberNativeApp } from '../utils/native-app';
 
 interface FieldErrors {
   fullName?: string;
@@ -21,6 +22,9 @@ export function RegisterPage() {
   const { t, i18n } = useTranslation();
   const en = i18n.language.startsWith('en');
   const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
+  // Leído antes de limpiar el fragmento: el alta se pidió desde la app nativa
+  const [nativeApp] = useState(rememberNativeApp);
+  const [registered, setRegistered] = useState(false);
   const [validated, setValidated] = useState(false);
   const [showPasswords, setShowPasswords] = useState(false);
   const [form, setForm] = useState({ fullName: '', email: '', whatsapp: '', password: '', passwordConfirmation: '' });
@@ -36,6 +40,8 @@ export function RegisterPage() {
     return ()=>{active=false;};
   },[token,en]);
 
+  if (registered && nativeApp)
+    return <ReturnToApp app={nativeApp} email={form.email} message={t('returnToApp.registered')} />;
   if (!loading && user) return <Navigate to="/" replace />;
 
   const update = (key: keyof typeof form) => (event: { target: { value: string } }) =>
@@ -68,6 +74,7 @@ export function RegisterPage() {
         whatsapp: form.whatsapp.trim(),
         password: form.password,
       });
+      if (nativeApp) return setRegistered(true);
       navigate(sessionStorage.getItem('lc.plan') === 'premium' ? '/billing' : '/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('register.failed'));

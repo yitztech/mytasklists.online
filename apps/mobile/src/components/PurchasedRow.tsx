@@ -6,6 +6,7 @@ import { Badge, CheckGlyph, CrossGlyph } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { itemDates } from '../utils/item-dates';
 
 interface Props {
   item: Item;
@@ -14,10 +15,12 @@ interface Props {
   disabled?: boolean;
   first?: boolean;
   onEdit: (item: Item) => void;
+  /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
+  showDates?: boolean;
 }
 
 /** Producto comprado: se muestra tachado y se quita con la "x" */
-export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit }: Props) {
+export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit, showDates }: Props) {
   const { t, i18n } = useTranslation();
   const knownUnit=UNITS.find(u=>u.value===item.unit);
   const unitLabel=knownUnit?(i18n.language.startsWith('en')?knownUnit.en:knownUnit.es):item.unit;
@@ -49,6 +52,7 @@ export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit
             />
           )}
         </View>
+        {showDates ? <Text style={styles.meta} testID="item-dates">{itemDates(item, t, i18n.language)}</Text> : null}
       </View>
 
       <Pressable onPress={() => onEdit(item)} accessibilityRole="button" accessibilityLabel={`${t('item.edit')}: ${item.name}`} disabled={disabled} style={styles.edit}><Text style={{ color: colors.brand, fontWeight: '700' }}>{t('item.edit')}</Text></Pressable>

@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { SocialButtons } from '../components/SocialButtons';
 import { MfaCodeForm } from '../components/MfaCodeForm';
+import { ReturnToApp } from '../components/ReturnToApp';
+import { rememberNativeApp } from '../utils/native-app';
 
 export function LoginPage() {
   const { login, verifyMfa, user, loading } = useAuth();
@@ -17,10 +19,15 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
+  // Si esta pestaña llegó desde un correo pedido en la app nativa, al entrar se vuelve a ella
+  const [nativeApp] = useState(rememberNativeApp);
+  const [signedIn, setSignedIn] = useState(false);
 
+  if (signedIn && nativeApp)
+    return <ReturnToApp app={nativeApp} email={email.trim().toLowerCase()} message={t('returnToApp.signedIn')} />;
   if (!loading && user) return <Navigate to={sessionStorage.getItem('lc.plan')==='premium'?'/billing':(location.state?.from ?? '/')} replace />;
 
-  const goHome = () => navigate(sessionStorage.getItem('lc.plan')==='premium'?'/billing':(location.state?.from ?? '/'), { replace: true });
+  const goHome = () => nativeApp ? setSignedIn(true) : navigate(sessionStorage.getItem('lc.plan')==='premium'?'/billing':(location.state?.from ?? '/'), { replace: true });
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
