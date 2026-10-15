@@ -47,6 +47,12 @@ test('a new source key and a changed source string cannot reuse old missing-tran
   const filename = path.join(dir, 'apps/frontend/src/i18n/es.ts');
   fs.appendFileSync(filename, '\nes.newControl = "Nueva acción";\n');
   assert.ok(check(dir).errors.some(error => /frontend:fr:newControl/.test(error)));
+  const frFile = path.join(dir, 'apps/frontend/src/i18n/fr.ts');
+  fs.writeFileSync(frFile, fs.readFileSync(frFile, 'utf8').replace("loading: 'Chargement…',", ''));
+  const debtFile = path.join(dir, 'scripts/i18n-debt.json');
+  const debt = JSON.parse(fs.readFileSync(debtFile, 'utf8'));
+  debt.missing.push('frontend:fr:common.loading:oldhash');
+  fs.writeFileSync(debtFile, JSON.stringify(debt));
   fs.writeFileSync(filename, fs.readFileSync(filename, 'utf8').replace("loading: 'Cargando…'", "loading: 'Cargando tus listas…'"));
   assert.ok(check(dir).errors.some(error => /frontend:fr:common.loading/.test(error)));
 });

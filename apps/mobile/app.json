@@ -75,7 +75,7 @@
       "socketUrl": "http://localhost:8080",
       "googleIosClientId": "",
       "googleAndroidClientId": "",
-      "googleWebClientId": "",
+      "googleWebClientId": "945243832514-k9eqfgi9f0tf3a25q2vt6mttk00gc6i2.apps.googleusercontent.com",
       "eas": {
         "projectId": "00000000-0000-0000-0000-000000000000"
       }
