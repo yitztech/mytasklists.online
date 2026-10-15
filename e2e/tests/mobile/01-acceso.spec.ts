@@ -39,14 +39,15 @@ test.describe('App móvil · acceso', () => {
     await expect(page.getByTestId('login-error')).toBeVisible();
   });
 
-  test('CP-MOV-005 · se ofrece inicio de sesión con Google y Apple', async ({ page }) => {
+  test('CP-MOV-005 · Google sin configurar no ofrece una falsa sesión nativa', async ({ page }) => {
     await page.goto('/');
-    // En Android/web se muestra el botón de Google; el de Apple es nativo de iOS
-    await expect(page.getByTestId('google-login')).toBeVisible();
-
-    await page.getByTestId('google-login').click();
-    await expect(page.getByTestId('social-help-screen')).toBeVisible();
-    await expect(page.getByTestId('open-provider')).toBeVisible();
+    // Este build de pruebas no incluye client ID Google. El flujo nativo se
+    // valida por separado en un binario firmado con el SDK instalado.
+    await expect(page.getByTestId('google-unavailable')).toBeVisible();
+    await expect(page.getByTestId('google-login')).toHaveCount(0);
+    await expect(page.getByTestId('open-provider')).toHaveCount(0);
+    await expect(page.getByTestId('login-email')).toBeVisible();
+    await expect(page.getByTestId('login-submit')).toBeVisible();
   });
 
   test('CP-MOV-006 · cerrar sesión desde mi cuenta', async ({ page, request }) => {

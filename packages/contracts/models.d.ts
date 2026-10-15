@@ -10,7 +10,10 @@ export type UserRole = 'user' | 'admin';
 export type DevicePlatform = 'ios' | 'android' | 'web';
 
 /** Idiomas de la interfaz, los correos y los avisos */
-export type Locale = 'es' | 'en';
+export type { Locale as SupportedLocale } from './locales';
+import type { Locale as SupportedLocale, EnabledLocale } from './locales';
+/** Published clients only understand complete enabled catalogs. */
+export type Locale = EnabledLocale;
 
 /**
  * Tipos de aviso conocidos. `AppNotification.type` es un texto abierto: el backend
@@ -42,6 +45,8 @@ export interface User {
   isActive: boolean;
   /** Idioma de sus correos y avisos; los clientes lo igualan al de su interfaz */
   locale: Locale;
+  /** Saved preference, including catalogs awaiting full delivery. */
+  preferredLocale?: SupportedLocale;
   createdAt: string;
   /** Solo en el perfil propio: si la cuenta tiene contraseña definida */
   hasPassword?: boolean;

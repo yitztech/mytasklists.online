@@ -1,31 +1,19 @@
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Card } from '../components/ui';
-import { API_URL } from '../api/client';
 import { colors, spacing } from '../theme';
 
-/**
- * Google exige un client id nativo por plataforma. Mientras no se configure en
- * el proyecto de EAS, ofrecemos el flujo web del backend, que devuelve al mismo
- * usuario y funciona en las dos tiendas.
- */
+/** Compatibility route for older navigation state; native login never opens a web session. */
 export function SocialHelpScreen({ route, navigation }: any) {
   const { t } = useTranslation();
   const provider = route?.params?.provider ?? 'Google';
-  const url = `${API_URL}/auth/${provider.toLowerCase()}`;
 
   return (
     <ScrollView contentContainerStyle={styles.container} testID="social-help-screen">
       <Card>
         <Text style={styles.title}>{t('social.title', { provider })}</Text>
-        <Text style={styles.body}>{t('social.body', { provider })}</Text>
-        <Button
-          title={t('social.open', { provider })}
-          onPress={() => Linking.openURL(url)}
-          testID="open-provider"
-          style={{ marginTop: spacing.lg }}
-        />
+        <Text style={styles.body}>{t('google.unavailable')}</Text>
         <Button
           title={t('common.back')}
           variant="ghost"

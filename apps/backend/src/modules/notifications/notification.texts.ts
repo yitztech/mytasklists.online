@@ -1,4 +1,4 @@
-import type { Locale } from '@lista/contracts';
+import type { EnabledLocale } from '@lista/contracts/locales';
 
 /**
  * Textos de los avisos (pop-up en la web y push en el teléfono). Se generan en el
@@ -34,4 +34,4 @@ const en: typeof es = {
   listShared: (actor, list) => `${actor ?? 'Someone'} shared the list "${list}" with you`,
 };
 
-export const NOTIFICATION_TEXTS: Record<Locale, typeof es> = { es, en };
+export const NOTIFICATION_TEXTS: Record<EnabledLocale, typeof es> = { es, en };

@@ -19,6 +19,7 @@
     "@fastify/helmet": "^13.1.1",
     "@fastify/multipart": "^10.1.2",
     "@fastify/static": "^10.1.5",
+    "@lista/contracts": "2.0.0",
     "@nestjs/common": "^12.1.2",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.1.2",
@@ -49,7 +50,6 @@
     "typeorm": "^1.1.1"
   },
   "devDependencies": {
-    "@lista/contracts": "2.0.0",
     "@nestjs/cli": "^12.0.8",
     "@nestjs/schematics": "^12.0.6",
     "@types/node": "^24.19.0",

@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { createHash, randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcryptjs';
-import type { Locale } from '@lista/contracts';
+import type { SupportedLocale as Locale } from '@lista/contracts';
 import { User, AuthProvider, InvitationStatus, ListInvitation, ListMember } from '../../database/entities';
 import { MailService } from '../mail/mail.service';
 import { registrationTemplate } from '../mail/mail.templates';

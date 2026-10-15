@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
@@ -22,34 +21,24 @@ const clientIds = {
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || extra.googleWebClientId || undefined,
 };
 
-/** Hay client id de Google para la plataforma en la que corre la app */
-export const googleConfigured = Boolean(
-  Platform.select({
-    ios: clientIds.iosClientId,
-    android: clientIds.androidClientId,
-    default: clientIds.webClientId,
-  }),
-);
+/** Browser client configuration; native platforms use the separate SDK module. */
+export const googleConfigured = Boolean(clientIds.webClientId);
 
 interface Props {
-  onIdToken: (idToken: string) => void;
+  onIdToken: (idToken: string) => Promise<void>;
+  disabled?: boolean;
   onError: (message: string) => void;
 }
 
-/**
- * Inicio de sesión nativo con Google: el SDK devuelve un id_token que el
- * backend verifica en POST /auth/google/token. Requiere un development build
- * (no funciona en Expo Go) y los client id de iOS/Android en app.json.
- * Solo se monta cuando `googleConfigured` es true: el hook exige el client id.
- */
-export function GoogleSignInButton({ onIdToken, onError }: Props) {
+/** Browser-only implementation; Metro selects .native.tsx in Android/iOS. */
+export function GoogleSignInButton({ onIdToken, onError, disabled }: Props) {
   const { t } = useTranslation();
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest(clientIds);
 
   useEffect(() => {
     if (response?.type === 'success') {
       const idToken = response.params.id_token ?? response.authentication?.idToken;
-      if (idToken) onIdToken(idToken);
+      if (idToken) void onIdToken(idToken);
       else onError(t('google.noToken'));
     } else if (response?.type === 'error') {
       onError(t('google.failed'));
@@ -60,7 +49,7 @@ export function GoogleSignInButton({ onIdToken, onError }: Props) {
     <Button
       title={t('login.google')}
       variant="ghost"
-      disabled={!request}
+      disabled={!request || disabled}
       onPress={() => void promptAsync()}
       testID="google-login"
       style={{ marginBottom: 16 }}

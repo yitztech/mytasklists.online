@@ -9,8 +9,8 @@
  * - Los tipos que terminan en `Request` y `ClientEvents` viajan del cliente al servidor.
  * - Todo lo demás viaja del servidor al cliente.
  *
- * Idioma: los clientes mandan el suyo en `Accept-Language` (es | en) y la API
- * responde los errores en ese idioma.
+ * Idioma: los clientes mandan el suyo en `Accept-Language` (es/en/pt/de/fr) y la API
+ * conserva la preferencia. Los errores usan es/en hasta completar los catálogos.
  */
 export * from './models';
 export * from './auth';

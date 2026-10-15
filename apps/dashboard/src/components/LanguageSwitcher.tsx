@@ -1,3 +1,4 @@
+import { LOCALE_CONFIG } from '@lista/contracts/locales';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES, setLanguage } from '../i18n';
 
@@ -18,7 +19,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
           type="button"
           onClick={() => setLanguage(language)}
           aria-pressed={i18n.language === language}
-          title={t(`language.${language}`)}
+          title={LOCALE_CONFIG[language].name}
           lang={language}
           data-testid={`language-${language}`}
         >

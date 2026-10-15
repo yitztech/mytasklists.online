@@ -45,6 +45,7 @@ export const en: Catalog<typeof es> = {
     backFromWeb: 'All set. Sign in with your email and password.',
   },
   google: {
+    unavailable: 'Google is unavailable in this build. Sign in with your email and password.',
     noToken: 'Google did not return a token',
     failed: 'Could not sign in with Google',
   },

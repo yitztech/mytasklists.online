@@ -1,3 +1,4 @@
+import { LOCALE_CONFIG } from '@lista/contracts/locales';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +18,8 @@ export function LanguageSwitcher() {
             key={language}
             onPress={() => setLanguage(language)}
             accessibilityRole="radio"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={t(`language.${language}`)}
+            accessibilityState={{ checked: active }}
+            accessibilityLabel={LOCALE_CONFIG[language].name}
             testID={`language-${language}`}
             style={[styles.option, active && styles.optionActive]}
           >

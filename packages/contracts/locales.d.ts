@@ -1,0 +1,10 @@
+export declare const SUPPORTED_LOCALES: readonly ['es', 'en', 'pt', 'de', 'fr'];
+export declare const ENABLED_LOCALES: readonly ['es', 'en'];
+export type Locale = (typeof SUPPORTED_LOCALES)[number];
+export type EnabledLocale = (typeof ENABLED_LOCALES)[number];
+export declare const DEFAULT_LOCALE: 'es';
+export declare const LOCALE_CONFIG: Readonly<Record<Locale, Readonly<{ intl: string; name: string }>>>;
+export declare function isLocale(value: unknown): value is Locale;
+export declare function isEnabledLocale(value: unknown): value is EnabledLocale;
+export declare function normalizeLocale(value: unknown): Locale | undefined;
+export declare function resolveEnabledLocale(value: unknown): EnabledLocale;
