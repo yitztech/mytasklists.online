@@ -1,4 +1,5 @@
-import type { ChangePasswordRequest, DeleteAccountRequest, Locale, UpdateProfileRequest } from '@lista/contracts';
+import { SUPPORTED_LOCALES } from '@lista/contracts/locales';
+import type { ChangePasswordRequest, DeleteAccountRequest, SupportedLocale, UpdateProfileRequest } from '@lista/contracts';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -35,10 +36,10 @@ export class UpdateProfileDto implements UpdateProfileRequest {
   @MaxLength(500)
   avatarUrl?: string;
 
-  @ApiPropertyOptional({ enum: ['es', 'en'], description: 'Idioma de los correos y avisos' })
+  @ApiPropertyOptional({ enum: [...SUPPORTED_LOCALES], description: 'Idioma de los correos y avisos' })
   @IsOptional()
-  @IsIn(['es', 'en'])
-  locale?: Locale;
+  @IsIn(SUPPORTED_LOCALES)
+  locale?: SupportedLocale;
 }
 
 export class ChangePasswordDto implements ChangePasswordRequest {

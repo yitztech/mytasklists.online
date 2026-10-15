@@ -18,6 +18,7 @@ ARG LANDING_PUBLIC_URL=https://mytasklists.online
 ARG LANDING_NOINDEX=false
 ENV LANDING_PUBLIC_URL=$LANDING_PUBLIC_URL LANDING_NOINDEX=$LANDING_NOINDEX
 COPY package.json build.mjs translations.mjs ./
+COPY catalogs ./catalogs
 COPY src ./src
 RUN node build.mjs
 

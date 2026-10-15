@@ -65,6 +65,7 @@ export const ERRORS_EN: Record<string, string> = {
   'El token de Apple no es válido': 'The Apple token is invalid',
   'El token de Google no corresponde a este inicio de sesión': 'The Google token does not match this sign-in',
   'El token de Apple no corresponde a este inicio de sesión': 'The Apple token does not match this sign-in',
+  'La cuenta de Google no expone una identidad válida': 'The Google account does not provide a valid identity',
   'La cuenta de Google no expone un correo electrónico': 'The Google account does not share an email address',
 
   // Validación de formularios

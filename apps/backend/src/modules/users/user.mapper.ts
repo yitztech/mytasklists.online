@@ -1,3 +1,4 @@
+import { resolveEnabledLocale } from '@lista/contracts/locales';
 import type { PublicProfile, User } from '@lista/contracts';
 import { User as UserEntity } from '../../database/entities';
 
@@ -18,7 +19,8 @@ export const toPublicUser = (user: UserEntity, extra: { hasPassword?: boolean } 
   emailVerified: user.emailVerified,
   mfaEnabled: Boolean(user.totpEnabled),
   isActive: user.isActive,
-  locale: user.locale,
+  locale: resolveEnabledLocale(user.locale),
+  preferredLocale: user.locale,
   createdAt: new Date(user.createdAt).toISOString(),
   ...(extra.hasPassword === undefined ? {} : { hasPassword: extra.hasPassword }),
 });

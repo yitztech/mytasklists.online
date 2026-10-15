@@ -44,6 +44,8 @@ RUN apk add --no-cache tini \
 COPY --from=deps    /app/node_modules                 /app/node_modules
 COPY --from=deps    /app/apps/backend/node_modules    ./node_modules
 COPY --from=builder /app/apps/backend/dist            ./dist
+# Runtime locale policy is a workspace package; preserve its symlink target.
+COPY --from=deps /app/packages/contracts /app/packages/contracts
 COPY apps/backend/package.json ./
 
 USER nestjs

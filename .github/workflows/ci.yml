@@ -49,9 +49,13 @@ jobs:
             apps/mobile/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
+      - name: Cobertura de idiomas y nuevos textos de interfaz
+        run: npm run i18n:check && npm run test:i18n
       # Backend, web, panel y app móvil contra el mismo contrato
       - run: npm run typecheck
       - run: npm run build --workspaces --if-present
+      - name: Seguridad Google y compatibilidad de idiomas
+        run: node --test scripts/test-google-auth.cjs scripts/test-backend-locales.mjs
 
   dependencies:
     name: Seguridad de dependencias

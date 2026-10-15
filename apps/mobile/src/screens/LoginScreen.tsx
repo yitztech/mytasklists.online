@@ -75,7 +75,7 @@ export function LoginScreen({ navigation }: any) {
   };
 
   const googleSignIn = useCallback(
-    (idToken: string) => void run(async () => afterStep(await loginWithGoogle(idToken))),
+    (idToken: string) => run(async () => afterStep(await loginWithGoogle(idToken))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loginWithGoogle],
   );
@@ -197,15 +197,11 @@ export function LoginScreen({ navigation }: any) {
             ) : null}
 
             {googleConfigured ? (
-              <GoogleSignInButton onIdToken={googleSignIn} onError={setError} />
+              <GoogleSignInButton onIdToken={googleSignIn} onError={setError} disabled={loading} />
             ) : (
-              <Button
-                title={t('login.google')}
-                variant="ghost"
-                onPress={() => navigation.navigate('SocialHelp', { provider: 'Google' })}
-                testID="google-login"
-                style={{ marginBottom: spacing.md }}
-              />
+              <Text style={styles.notice} testID="google-unavailable">
+                {t('google.unavailable')}
+              </Text>
             )}
 
             <Pressable onPress={() => navigation.navigate('Register')} testID="go-register">

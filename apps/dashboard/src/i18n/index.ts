@@ -1,15 +1,20 @@
+import { ENABLED_LOCALES, LOCALE_CONFIG, isEnabledLocale } from '@lista/contracts/locales';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { es } from './es';
 import { en } from './en';
+import { pt } from './pt';
+import { de } from './de';
+import { fr } from './fr';
 
-export const LANGUAGES = ['es', 'en'] as const;
+// Draft locales stay hidden until their release coverage is complete.
+export const LANGUAGES = ENABLED_LOCALES;
 export type Language = (typeof LANGUAGES)[number];
 
 /** Compartida con la app web y la landing: todos se sirven desde el mismo dominio */
 const STORAGE_KEY = 'lc.lang';
 
-const isLanguage = (value: unknown): value is Language => LANGUAGES.includes(value as Language);
+const isLanguage = (value: unknown): value is Language => isEnabledLocale(value);
 
 /**
  * La elección guardada gana; si no hay, se usa el primer idioma del navegador que
@@ -31,6 +36,7 @@ export function detectLanguage(): Language {
 }
 
 export function setLanguage(language: Language): void {
+  if (!isLanguage(language)) return;
   try {
     localStorage.setItem(STORAGE_KEY, language);
   } catch {
@@ -42,14 +48,17 @@ export function setLanguage(language: Language): void {
 export const currentLanguage = (): Language => (isLanguage(i18n.language) ? i18n.language : 'es');
 
 /** Formato de fechas y números de cada idioma */
-export const LOCALE_TAGS: Record<Language, string> = { es: 'es-MX', en: 'en-US' };
+export const LOCALE_TAGS = Object.fromEntries(
+  LANGUAGES.map(language => [language, LOCALE_CONFIG[language].intl]),
+) as Record<Language, string>;
 
 i18n.on('languageChanged', (language) => {
   document.documentElement.lang = language;
 });
 
 void i18n.use(initReactI18next).init({
-  resources: { es: { translation: es }, en: { translation: en } },
+  supportedLngs: [...LANGUAGES],
+  resources: { es: { translation: es }, en: { translation: en }, pt: { translation: pt }, de: { translation: de }, fr: { translation: fr } },
   lng: detectLanguage(),
   fallbackLng: 'es',
   interpolation: { escapeValue: false },

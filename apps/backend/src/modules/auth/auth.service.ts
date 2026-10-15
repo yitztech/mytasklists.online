@@ -1,4 +1,4 @@
-import type { Locale } from '@lista/contracts';
+import type { SupportedLocale as Locale } from '@lista/contracts';
 import {
   BadRequestException,
   ForbiddenException,

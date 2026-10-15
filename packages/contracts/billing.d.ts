@@ -1,6 +1,10 @@
+import type { Locale, EnabledLocale } from './locales';
+
+/** Legacy catalogs stay required; future catalogs can be supplied independently. */
+export type BillingBenefits = Record<EnabledLocale, string> & Partial<Record<Exclude<Locale, EnabledLocale>, string>>;
 export interface BillingPlans {
  currency:string; price:number; interval:string; enabled:boolean;
- benefits:{es:string;en:string};
+ benefits:BillingBenefits;
  limits:{freeLists:number|null;freeItems:number|null;premiumLists:number|null;premiumItems:number|null};
  stores:{ios:boolean;android:boolean;iosProduct:string|null;androidProduct:string|null;androidBasePlan:string};
 }

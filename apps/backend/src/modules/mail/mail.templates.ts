@@ -3,7 +3,7 @@
  * devuelve asunto, texto plano y HTML sencillo (tablas + estilos en línea, lo que
  * mejor soportan los clientes de correo).
  */
-import type { Locale } from '@lista/contracts';
+import { resolveEnabledLocale, type EnabledLocale, type Locale } from '@lista/contracts/locales';
 
 export interface MailContent {
   subject: string;
@@ -25,7 +25,7 @@ const LAYOUT = {
     fallback: 'If the button does not work, copy this link into your browser:',
     footer: 'If this was not you, ignore this email. MyTaskLists will never ask for your password by email.',
   },
-} satisfies Record<Locale, unknown>;
+} satisfies Record<EnabledLocale, unknown>;
 
 const layout = (
   locale: Locale,
@@ -34,7 +34,7 @@ const layout = (
   action?: { label: string; url: string },
 ): string => `
 <!doctype html>
-<html lang="${locale}">
+<html lang="${resolveEnabledLocale(locale)}">
   <body style="margin:0;padding:24px;background:#f4f6fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
       <tr><td align="center">
@@ -47,10 +47,10 @@ const layout = (
               ? `<tr><td align="center" style="padding:24px 0">
                    <a href="${escape(action.url)}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:bold;display:inline-block">${escape(action.label)}</a>
                  </td></tr>
-                 <tr><td style="font-size:12px;color:#6b7280;word-break:break-all">${LAYOUT[locale].fallback}<br>${escape(action.url)}</td></tr>`
+                 <tr><td style="font-size:12px;color:#6b7280;word-break:break-all">${LAYOUT[resolveEnabledLocale(locale)].fallback}<br>${escape(action.url)}</td></tr>`
               : ''
           }
-          <tr><td style="font-size:12px;color:#9ca3af;padding-top:24px">${LAYOUT[locale].footer}</td></tr>
+          <tr><td style="font-size:12px;color:#9ca3af;padding-top:24px">${LAYOUT[resolveEnabledLocale(locale)].footer}</td></tr>
         </table>
       </td></tr>
     </table>

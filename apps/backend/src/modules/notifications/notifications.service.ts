@@ -12,7 +12,7 @@ import { RT } from '../realtime/realtime.events';
 import { PushService } from './push.service';
 import { toNotificationView } from './notification.mapper';
 import { NOTIFICATION_TEXTS } from './notification.texts';
-import { DEFAULT_LOCALE, type Locale } from '../../i18n/locale';
+import { resolveEnabledLocale, type EnabledLocale } from '@lista/contracts/locales';
 
 export interface NotifyInput {
   listId: string;
@@ -22,7 +22,7 @@ export interface NotifyInput {
   actorName?: string;
   type: NotificationType;
   /** Título y cuerpo en el idioma de cada destinatario */
-  render: (texts: (typeof NOTIFICATION_TEXTS)[Locale]) => { title: string; body: string };
+  render: (texts: (typeof NOTIFICATION_TEXTS)[EnabledLocale]) => { title: string; body: string };
   payload?: Record<string, unknown>;
   /** Si se indica, esa persona no recibe el aviso (normalmente quien hizo el cambio) */
   excludeUserId?: string | null;
@@ -69,8 +69,8 @@ export class NotificationsService {
     const recipients = await this.resolveRecipients(input);
     if (!recipients.length) return;
 
-    const localeOf = (member: ListMember): Locale => member.user?.locale ?? DEFAULT_LOCALE;
-    const texts = (locale: Locale) => input.render(NOTIFICATION_TEXTS[locale]);
+    const localeOf = (member: ListMember): EnabledLocale => resolveEnabledLocale(member.user?.locale);
+    const texts = (locale: EnabledLocale) => input.render(NOTIFICATION_TEXTS[locale]);
 
     const rows = recipients.map((member) =>
       this.repo.create({

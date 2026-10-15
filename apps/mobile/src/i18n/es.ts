@@ -45,6 +45,7 @@ export const es = {
     backFromWeb: 'Listo. Ingresa con tu correo y tu contraseña.',
   },
   google: {
+    unavailable: 'Google no está disponible en esta versión. Ingresa con tu correo y contraseña.',
     noToken: 'Google no devolvió el token',
     failed: 'No se pudo iniciar sesión con Google',
   },

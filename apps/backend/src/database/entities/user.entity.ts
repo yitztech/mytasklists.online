@@ -1,4 +1,4 @@
-import type { Locale } from '@lista/contracts';
+import type { SupportedLocale as Locale } from '@lista/contracts';
 import {
   Column,
   CreateDateColumn,
@@ -75,7 +75,7 @@ export class User {
   })
   totpRecoveryCodes: string[] | null;
 
-  /** Idioma de sus correos y avisos (es | en); los clientes lo igualan al de su interfaz */
+  /** Preferencia de idioma (es/en/pt/de/fr; catálogos es/en habilitados); los clientes lo igualan al de su interfaz */
   @Column({ type: 'varchar', length: 5, default: 'es' })
   locale: Locale;
 

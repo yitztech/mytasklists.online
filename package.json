@@ -12,6 +12,9 @@
     "e2e"
   ],
   "scripts": {
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "test:i18n": "node --test scripts/test-i18n-check.mjs",
+    "test:auth-locales": "npm run build --workspace @lista/backend && node --test scripts/test-google-auth.cjs scripts/test-backend-locales.mjs",
     "up": "docker compose up -d --build",
     "up:logs": "docker compose up --build",
     "down": "docker compose down",

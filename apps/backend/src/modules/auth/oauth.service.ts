@@ -140,8 +140,8 @@ export class OAuthService {
 
   /**
    * Verifica un id_token de Google. Acepta como audiencia el client_id web y los
-   * de iOS/Android (`GOOGLE_ALLOWED_AUDIENCES`), porque el SDK nativo emite el
-   * token para el client_id de la plataforma.
+   * explícitos (`GOOGLE_ALLOWED_AUDIENCES`). Credential Manager usa el client_id
+   * WEB configurado en la app como audiencia, también en Android.
    */
   async verifyGoogleIdToken(idToken: string, expectedNonce?: string): Promise<SocialProfile> {
     const audiences = this.config.get<string[]>('google.allowedAudiences', []);
@@ -152,12 +152,16 @@ export class OAuthService {
       const { payload } = await jwtVerify(idToken, this.googleJwks, {
         issuer: GOOGLE_ISSUERS,
         audience: audiences,
+        algorithms: ['RS256'],
+        requiredClaims: ['sub', 'exp', 'iat', 'email'],
       });
       if (expectedNonce !== undefined && payload.nonce !== expectedNonce) {
         throw new BadRequestException('El token de Google no corresponde a este inicio de sesión');
       }
       const email = payload.email as string | undefined;
-      if (!email) throw new BadRequestException('La cuenta de Google no expone un correo electrónico');
+      if (typeof email !== 'string' || !email.includes('@') || !payload.sub?.trim()) {
+        throw new BadRequestException('La cuenta de Google no expone una identidad válida');
+      }
       return {
         provider: 'google',
         providerId: String(payload.sub),
