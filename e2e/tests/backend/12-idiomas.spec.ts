@@ -65,7 +65,9 @@ test.describe('Servicio backend · idiomas', () => {
     expect(user.locale).toBe('en');
 
     expect((await setLocale(request, accessToken, 'es')).locale).toBe('es');
-    expect((await setLocale(request, accessToken, 'fr')).locale).toBe('fr');
+    const frProfile = await setLocale(request, accessToken, 'fr');
+    expect(frProfile.preferredLocale).toBe('fr');
+    expect(frProfile.locale).toBe('es');
 
     const unsupported = await request.patch(`${API_URL}/users/me`, {
       headers: auth(accessToken),
