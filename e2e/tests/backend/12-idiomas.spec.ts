@@ -21,7 +21,7 @@ import { waitForEmail } from '../../utils/mailpit';
 const EN = { 'Accept-Language': 'en' };
 const ES = { 'Accept-Language': 'es' };
 
-async function setLocale(request: any, token: string, locale: 'es' | 'en') {
+async function setLocale(request: any, token: string, locale: string) {
   const response = await request.patch(`${API_URL}/users/me`, { headers: auth(token), data: { locale } });
   expect(response.ok()).toBeTruthy();
   return response.json();
@@ -65,10 +65,11 @@ test.describe('Servicio backend · idiomas', () => {
     expect(user.locale).toBe('en');
 
     expect((await setLocale(request, accessToken, 'es')).locale).toBe('es');
+    expect((await setLocale(request, accessToken, 'fr')).locale).toBe('fr');
 
     const unsupported = await request.patch(`${API_URL}/users/me`, {
       headers: auth(accessToken),
-      data: { locale: 'fr' },
+      data: { locale: 'it' },
     });
     expect(unsupported.status()).toBe(400);
   });
