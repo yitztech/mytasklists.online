@@ -12,7 +12,7 @@ El registro y las invitaciones escriben un outbox en su transacción. El conteni
 
 ## Identidades y despliegue
 
-La base sigue el modelo de yunitztech: un único usuario, `POSTGRES_USER/PASSWORD`, propietario de la base. La API lo usa y ejecuta las migraciones al arrancar (`RUN_MIGRATIONS=true`). PostgreSQL y Redis solo están en la red `backend` (`internal: true`) y no publican puertos.
+La base sigue el modelo de yunitztech: un único usuario, `POSTGRES_USER/PASSWORD`, propietario de la base. La API lo usa y ejecuta las migraciones al arrancar (`RUN_MIGRATIONS=true`). PostgreSQL y Redis no publican puertos y comparten el espacio de red de la API (ver «Aislamiento de red en Coolify»).
 
 `apps/backend/src/database/run-migrations.ts` y la prueba `SEC-02` corresponden a un rol de aplicación sin privilegios (`APP_DB_USER`). Producción no los usa; quedan como referencia para la revisión pendiente.
 
@@ -28,11 +28,13 @@ La política Restic incluye `/var/lib/docker/volumes/*_item-images/_data`, los v
 
 `uuid` transitivo de Xcode se fija a 11.1.1 y se valida compilando el APK. `node-forge` 1.4.0 continúa afectado por [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv), sin versión corregida publicada al 1 de octubre de 2026. La excepción de herramientas de CI es exacta para ese aviso y caduca el 31 de octubre; otros avisos bloquean CI. No declara corregida la dependencia. El APK directo tiene OTA desactivado. Revisar una publicación corregida antes del vencimiento y ejecutar `node scripts/audit-dependencies.mjs` después de actualizar.
 
-## Pendiente de revisión: aislamiento de red en Coolify
+## Aislamiento de red en Coolify
 
-Detectado el 2 de octubre de 2026 y aplazado para revisarlo con calma. Afecta a mytasklists (vps1) y a yunitztech (vps2).
+Detectado el 2 de octubre de 2026 y resuelto en mytasklists el 14 de octubre. En yunitztech (vps2) sigue pendiente.
 
-- Coolify 4.3.23 añade la red `<uuid>` de la app, que no es interna, a todos los servicios del compose (`bootstrap/helpers/parsers.php`). No ofrece opción para excluir uno; solo lo evita `network_mode`. Por eso PostgreSQL y Redis comparten red con gateway, frontend, landing y dashboard.
-- Coolify conecta Traefik (`coolify-proxy`) a las redes de las apps, incluida `_backend`, aunque sea `internal: true`. En vps2 ese mismo Traefik está conectado también a Coolify, Authelia, Listmonk, Umami y Stalwart.
-- Desde internet no hay exposición: 5432, 6379 y 3000 están cerrados, y UFW con `DOCKER-USER` solo admite 80/443 hacia contenedores. El riesgo es interno: un contenedor vecino o Traefik comprometidos llegan por red a PostgreSQL y Redis, y solo los separa la contraseña. Con un único usuario propietario, ese acceso tiene todos los privilegios sobre la base.
-- Opciones para evaluar, aplicándolas igual en ambas apps: rol de aplicación sin privilegios (`APP_DB_USER`, ver `run-migrations.ts`); IP fija del backend en `_backend` (`ipv4_address`) y `pg_hba.conf` limitado a esa IP; usuarios ACL en Redis.
+- Coolify añade todas las redes de nivel superior del compose, más la suya (`<uuid>`, que no es interna), a cada servicio (`bootstrap/helpers/parsers.php`). También conecta Traefik (`coolify-proxy`) a esas redes. Una red `internal: true` no aislaba nada: PostgreSQL y Redis acababan en las mismas redes que gateway, frontend, landing, dashboard y Traefik. Solo se libra un servicio que usa `network_mode`.
+- Por eso `backend`, `postgres` y `redis` comparten, como un pod, el espacio de red de `backend-net` (`registry.k8s.io/pause`) mediante `network_mode: service:backend-net`. PostgreSQL (`listen_addresses=127.0.0.1`) y Redis (`--bind 127.0.0.1`) escuchan solo en loopback: únicamente la API, dentro de ese espacio, llega a ellos. Desde otro contenedor, por nombre o por IP, en cualquier red, 5432 y 6379 están cerrados. El gateway sigue llamando a `backend:3000` gracias al alias de `backend-net`.
+- `backend-net` no cambia entre despliegues, así que un despliegue recrea la API sin reiniciar PostgreSQL ni Redis. Si se cambia su imagen, comprobar después del despliegue que `backend`, `postgres` y `redis` se recrearon con él; si no, quedan sin red hasta reiniciarlos.
+- La red `<uuid>_backend` del despliegue anterior queda huérfana, con Traefik conectado. No la usa ningún contenedor de la app y se puede borrar con `docker network rm` después de desconectar Traefik.
+- Las copias siguen funcionando: `restic-backup` hace `pg_dumpall` con `docker exec` por el socket local.
+- La API sigue expuesta en 3000 a Traefik y a las redes de la app, igual que antes. El usuario de la base sigue siendo el propietario único (modelo yunitztech).

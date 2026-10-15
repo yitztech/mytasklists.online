@@ -8,7 +8,8 @@
 #  - Dominio: SOLO al servicio `gateway`, puerto 80 (docs/DESPLIEGUE.md).
 #  - Sin puertos publicados en el host: solo el gateway es alcanzable, y solo
 #    desde Traefik.
-#  - Postgres y Redis viven en una red interna, sin salida a internet ni al gateway.
+#  - Postgres y Redis comparten el espacio de red de la API (`backend-net`) y
+#    escuchan solo en 127.0.0.1: nada fuera de ese espacio puede alcanzarlos.
 #  - Todo lo que termina en `:?` es obligatorio: si falta, el despliegue se detiene.
 #
 #  El entorno de desarrollo es docker-compose.yml (no se usa aquí).
@@ -52,6 +53,23 @@ services:
       timeout: 5s
       retries: 5
     networks: [frontend]
+
+  # Espacio de red de la API, como un pod: backend, postgres y redis lo comparten
+  # con `network_mode`. Coolify añade sus redes a todos los servicios del compose
+  # (incluida la suya, que no es interna) y conecta Traefik a ellas; a los que
+  # usan `network_mode` no les añade ninguna. Este contenedor solo mantiene el
+  # espacio abierto: no cambia entre despliegues, así que la base no se reinicia.
+  backend-net:
+    <<: *hardening
+    image: registry.k8s.io/pause:3.10.2
+    user: "65535:65535"
+    read_only: true
+    mem_limit: 16m
+    cpus: 0.05
+    networks:
+      frontend:
+        # El gateway sigue llamando a backend:3000
+        aliases: [backend]
 
   backend:
     <<: *hardening
@@ -100,13 +118,13 @@ services:
       TZ: ${TZ:-America/Mexico_City}
       NODE_OPTIONS: --max-old-space-size=384
 
-      # Base de datos y caché (servicios de este mismo compose)
-      POSTGRES_HOST: postgres
+      # Base de datos y caché: comparten el espacio de red de la API (backend-net)
+      POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-mytasklists}
       POSTGRES_USER: ${POSTGRES_USER:-lista}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}
-      REDIS_HOST: redis
+      REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Define REDIS_PASSWORD}
 
@@ -175,7 +193,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
-    networks: [frontend, backend]
+    network_mode: service:backend-net
 
   frontend:
     <<: *hardening
@@ -209,6 +227,8 @@ services:
     security_opt: [no-new-privileges:true]
     mem_limit: 512m
     cpus: 1.0
+    # Solo la API, que comparte este espacio de red, llega a 127.0.0.1
+    command: [postgres, -c, listen_addresses=127.0.0.1]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-mytasklists}
       POSTGRES_USER: ${POSTGRES_USER:-lista}
@@ -222,7 +242,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-    networks: [backend]
+    network_mode: service:backend-net
 
   redis:
     restart: unless-stopped
@@ -231,7 +251,7 @@ services:
     mem_limit: 128m
     cpus: 0.25
     command: >
-      sh -c 'redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
+      sh -c 'redis-server --bind 127.0.0.1 --appendonly yes --requirepass "$$REDIS_PASSWORD"'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Define REDIS_PASSWORD}
       REDISCLI_AUTH: ${REDIS_PASSWORD}
@@ -242,7 +262,7 @@ services:
       interval: 10s
       timeout: 3s
       retries: 20
-    networks: [backend]
+    network_mode: service:backend-net
 
 volumes:
   postgres18-data:
@@ -251,6 +271,3 @@ volumes:
 
 networks:
   frontend:
-  # Sin salida a internet ni acceso desde el gateway: solo backend ↔ postgres/redis
-  backend:
-    internal: true
