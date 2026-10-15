@@ -14,9 +14,12 @@ import { listsApi } from '../api/endpoints';
 import { useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { ListSummary } from '../types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ListsScreen({ navigation }: any) {
   const { t } = useTranslation();
+  // Margen de la barra del sistema de Android (de borde a borde)
+  const insets = useSafeAreaInsets();
   const [lists, setLists] = useState<ListSummary[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -70,7 +73,7 @@ export function ListsScreen({ navigation }: any) {
       <FlatList
         data={lists}
         keyExtractor={(list) => list.id}
-        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 + insets.bottom }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -147,7 +150,7 @@ export function ListsScreen({ navigation }: any) {
       />
 
       {!showForm && (
-        <Pressable style={styles.fab} onPress={() => setShowForm(true)} testID="new-list-button">
+        <Pressable style={[styles.fab, { bottom: spacing.xl + insets.bottom }]} onPress={() => setShowForm(true)} testID="new-list-button">
           <PlusGlyph size={22} />
         </Pressable>
       )}

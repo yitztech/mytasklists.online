@@ -38,11 +38,11 @@ export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit
 
       <View style={{ flex: 1 }}>
         {item.imageUrl && <Image source={{ uri: item.imageUrl.startsWith('http') ? item.imageUrl : `${API_URL}${item.imageUrl}` }} style={{ width: 56, height: 56, borderRadius: 8, marginBottom: 5 }} />}
-        <Text style={styles.name} testID="purchased-name" numberOfLines={1}>
+        <Text style={styles.name} testID="purchased-name">
           {item.name}
         </Text>
-        {(Number(item.quantity)!==1||item.unit!=='pza')&&<Text style={styles.meta} testID="purchased-quantity">{Number(item.quantity)} {unitLabel}</Text>}
         <View style={styles.metaRow}>
+          {(Number(item.quantity)!==1||item.unit!=='pza')&&<Text style={styles.meta} testID="purchased-quantity">{Number(item.quantity)} {unitLabel}</Text>}
           {item.purchasedByName ? <Text style={styles.meta}>{item.purchasedByName}</Text> : null}
           {item.isRecurring && item.daysUntilReactivation !== null && (
             <Badge
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textDecorationLine: 'line-through',
   },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 3 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 3, flexWrap: 'wrap' },
   meta: { fontSize: 13, color: colors.muted },
   close: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   edit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },

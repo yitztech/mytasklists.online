@@ -21,3 +21,9 @@ apps/mobile/android/
 
 # Volcados de base de datos (infra/postgres/upgrade-16-to-18.sh)
 pg16-dump-*.sql
+
+# Volcados temporales de playwright-cli
+.playwright-cli/
+
+# Evidencia local de QA (capturas, resultados, logs); se regenera con las pruebas
+qa-artifacts/

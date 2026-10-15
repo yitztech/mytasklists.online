@@ -123,7 +123,7 @@ export function Layout() {
         </div>
       </header>
 
-      <main className="container lc-shell lc-page flex-grow-1 py-4 py-md-5">
+      <main className="container lc-shell lc-page flex-grow-1 pt-4 pt-md-5 pb-md-5">
         <VerifyEmailBanner />
         <Outlet />
       </main>

@@ -38,4 +38,4 @@ Pendientes externos: entrega SMTP real/DNS, Stripe sandbox y live (incluidos SCA
 
 La auditoría npm local móvil y la base anterior detectan los mismos 11 avisos moderados en la cadena de herramientas Expo/xcode/uuid. La propuesta automática implica degradar Expo a versiones antiguas; no se aplicó `--force`. La auditoría del workspace raíz detectó cero vulnerabilidades.
 
-Resultados finales y capturas: [qa-artifacts/RESULTADOS.md](../qa-artifacts/RESULTADOS.md).
+Los resultados y capturas de cada validación quedan en `qa-artifacts/`, fuera del repositorio; se regeneran con las pruebas.

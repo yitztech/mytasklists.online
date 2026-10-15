@@ -87,6 +87,7 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
               onChange={(event) => setName(event.target.value)}
               disabled={disabled || saving}
               data-testid="item-name-input"
+              maxLength={140}
               autoComplete="off"
             />
           </div>

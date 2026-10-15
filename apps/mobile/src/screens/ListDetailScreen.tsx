@@ -27,6 +27,7 @@ import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
 import { itemImageForm } from '../utils/item-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SHOW_DATES_KEY = 'lc.mobile.showItemDates';
 
@@ -36,6 +37,8 @@ export function ListDetailScreen({ route, navigation }: any) {
   const listId: string = route.params.id;
   const { socket } = useSocket();
   const { user } = useAuth();
+  // Android dibuja de borde a borde: sin este margen, la barra del sistema tapa el último producto
+  const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<PendingInvitation[]>([]);
   const { t, i18n } = useTranslation();
   const en=i18n.language.startsWith('en');
@@ -147,7 +150,7 @@ export function ListDetailScreen({ route, navigation }: any) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 }}
+      contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 + insets.bottom }}
       testID="list-detail-screen"
       refreshControl={
         <RefreshControl
@@ -164,6 +167,7 @@ export function ListDetailScreen({ route, navigation }: any) {
       <View style={styles.addCard} testID="add-item-form">
         <TextInput
           testID="item-name-input"
+          maxLength={140}
           style={styles.addInput}
           placeholder={t('detail.addPlaceholder')}
           placeholderTextColor={colors.muted}

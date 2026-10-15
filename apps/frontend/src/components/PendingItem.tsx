@@ -65,10 +65,10 @@ export function PendingItem({ item, disabled, showDates, onPurchase, onDelete, o
 
       <div className="flex-grow-1 min-w-0">
         {item.imageUrl && <img src={`${API_URL}${item.imageUrl}`} alt="" loading="lazy" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, marginBottom: 6 }} />}
-        <div className="d-flex flex-wrap align-items-center gap-2">
-          <span className="lc-item-name text-truncate" data-testid="item-name">
-            {item.name}
-          </span>
+        <div className="lc-item-name" data-testid="item-name">
+          {item.name}
+        </div>
+        <div className="lc-item-meta">
           <span className="lc-chip" data-testid="item-quantity">
             {formatQuantity(item,i18n.language)}
           </span>

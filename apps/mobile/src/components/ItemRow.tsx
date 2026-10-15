@@ -45,7 +45,6 @@ export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit
         <Text
           style={[styles.name, item.isOverdue && { color: colors.dangerInk }]}
           testID="item-name"
-          numberOfLines={1}
         >
           {item.name}
         </Text>
