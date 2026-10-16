@@ -49,7 +49,10 @@ export function RegisterPage() {
 
   const validate = (): boolean => {
     const errors: FieldErrors = {};
-    if (form.fullName.trim().length < 3) errors.fullName = t('register.errors.fullName');
+    const nameTrimmed = form.fullName.trim();
+    if (nameTrimmed.length < 2 || nameTrimmed.length > 100 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/.test(nameTrimmed)) {
+      errors.fullName = t('register.errors.fullName');
+    }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim()))
       errors.email = t('register.errors.email');
     if (!/^\+?[0-9]{8,20}$/.test(form.whatsapp.trim()))
@@ -103,6 +106,7 @@ export function RegisterPage() {
                 className={`form-control ${fieldErrors.fullName ? 'is-invalid' : ''}`}
                 value={form.fullName}
                 onChange={update('fullName')}
+                maxLength={100}
                 autoComplete="name"
                 data-testid="register-fullname"
               />

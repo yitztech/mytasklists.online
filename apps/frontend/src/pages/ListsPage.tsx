@@ -48,13 +48,22 @@ export function ListsPage() {
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
-    if (!name.trim() || creating) return;
+    const trimmed = name.trim();
+    if (!trimmed || creating) return;
+    if (trimmed.length < 2 || trimmed.length > 120 || /[\x00-\x1F\x7F]/.test(trimmed)) {
+      show({
+        title: t('lists.createFailed'),
+        body: t('lists.createFailed'),
+        variant: 'danger',
+      });
+      return;
+    }
     setCreating(true);
     try {
-      await listsApi.create({ name: name.trim(), color, icon });
+      await listsApi.create({ name: trimmed, color, icon });
       setName('');
       setShowForm(false);
-      show({ title: t('lists.created'), body: t('lists.createdBody', { name: name.trim() }), variant: 'success' });
+      show({ title: t('lists.created'), body: t('lists.createdBody', { name: trimmed }), variant: 'success' });
       await load();
     } catch (err) {
       show({
@@ -103,6 +112,7 @@ export function ListsPage() {
                 <input
                   id="list-name"
                   className="form-control form-control-lg"
+                  maxLength={120}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={t('lists.namePlaceholder')}

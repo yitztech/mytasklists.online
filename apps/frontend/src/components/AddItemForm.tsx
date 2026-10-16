@@ -36,6 +36,10 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
     const trimmed = name.trim();
     if (!trimmed || saving) return;
 
+    if (/[\x00-\x1F\x7F]/.test(trimmed)) {
+      onError(t('addItem.failed'));
+      return;
+    }
     const amount = Number(quantity.replace(',', '.'));
     const selectedUnit = unit === 'custom' ? customUnit.trim() : unit;
     if (!Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount*100)-amount*100)>1e-7 || !selectedUnit || selectedUnit.length>20) {

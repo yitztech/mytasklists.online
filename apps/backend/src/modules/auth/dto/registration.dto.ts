@@ -10,7 +10,12 @@ export class RegistrationTokenDto {
 }
 export class CompleteRegistrationDto extends RegistrationTokenDto implements CompleteRegistrationRequest {
   @Transform(({value}) => typeof value === 'string' ? value.trim() : value)
-  @IsString() @Length(3,160) fullName: string;
+  @IsString()
+  @Length(2, 100, { message: 'El nombre completo debe tener entre 2 y 100 caracteres' })
+  @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/, {
+    message: 'El nombre solo puede contener letras, espacios, guiones y apóstrofes',
+  })
+  fullName: string;
   @Transform(({value}) => typeof value === 'string' ? value.trim() : value)
   @Matches(/^\+?[0-9]{8,20}$/) whatsapp: string;
   @IsString() @Length(8,128) password: string;

@@ -46,7 +46,7 @@ export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item;
     event.preventDefault();
     const amount = Number(quantity.replace(',', '.'));
     const selectedUnit = unit === 'custom' ? customUnit.trim() : unit;
-    if (!name.trim() || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selectedUnit || selectedUnit.length > 20) {
+    if (!name.trim() || /[\x00-\x1F\x7F]/.test(name.trim()) || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selectedUnit || selectedUnit.length > 20) {
       onError(en ? 'Enter a valid name, quantity and unit.' : 'Escribe un nombre, cantidad y unidad válidos.'); return;
     }
     setSaving(true);

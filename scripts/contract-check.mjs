@@ -80,6 +80,12 @@ export function checkContract(base = 'origin/main') {
       const previous=fs.existsSync(path.join(oldDir,'behavior.json'))?JSON.parse(fs.readFileSync(path.join(oldDir,'behavior.json'),'utf8')):{};
       if(next.registrationFlow !== previous.registrationFlow) breaking.push({name:'registrationFlow',reason:'el registro directo exige actualizar clientes al flujo de correo previo'});
     }
+    if (fs.existsSync(path.join(oldDir, 'locales.d.ts'))) {
+      fs.appendFileSync(path.join(oldDir, 'index.d.ts'), "\nexport type { EnabledLocale } from './locales';\n");
+    }
+    if (fs.existsSync(path.join(newDir, 'locales.d.ts'))) {
+      fs.appendFileSync(path.join(newDir, 'index.d.ts'), "\nexport type { EnabledLocale } from './locales';\n");
+    }
     const lines = [
       "import type * as Old from './old/index';",
       "import type * as New from './new/index';",
