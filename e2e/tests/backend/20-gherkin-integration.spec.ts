@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 test.describe('Pruebas de Integración Gherkin con Playwright (JavaScript / TypeScript)', () => {
-  const featuresDir = path.resolve('e2e/features');
+  const featuresDir = path.resolve(__dirname, '../../features');
   const files = fs.readdirSync(featuresDir).filter((f) => f.endsWith('.feature')).sort();
 
   for (const file of files) {
