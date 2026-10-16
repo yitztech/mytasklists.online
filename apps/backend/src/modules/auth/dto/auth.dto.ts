@@ -28,7 +28,10 @@ import { DevicePlatform } from '../../../database/entities';
 export class RegisterDto implements RegisterRequest {
   @ApiProperty({ example: 'Ana López García', description: 'Nombre completo' })
   @IsString()
-  @Length(3, 160, { message: 'El nombre completo debe tener entre 3 y 160 caracteres' })
+  @Length(2, 100, { message: 'El nombre completo debe tener entre 2 y 100 caracteres' })
+  @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/, {
+    message: 'El nombre solo puede contener letras, espacios, guiones y apóstrofes',
+  })
   fullName: string;
 
   @ApiProperty({ example: 'ana@example.com' })
@@ -120,6 +123,10 @@ export class SocialTokenDto implements SocialTokenRequest {
   @ApiPropertyOptional({ description: 'Nombre completo (Apple solo lo envía la primera vez)' })
   @IsOptional()
   @IsString()
+  @Length(2, 100, { message: 'El nombre completo debe tener entre 2 y 100 caracteres' })
+  @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/, {
+    message: 'El nombre solo puede contener letras, espacios, guiones y apóstrofes',
+  })
   fullName?: string;
 
   @ApiPropertyOptional({ description: 'WhatsApp para completar el registro social' })

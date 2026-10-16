@@ -17,7 +17,10 @@ export class UpdateProfileDto implements UpdateProfileRequest {
   @ApiPropertyOptional({ example: 'Ana López' })
   @IsOptional()
   @IsString()
-  @Length(3, 160)
+  @Length(2, 100, { message: 'El nombre completo debe tener entre 2 y 100 caracteres' })
+  @Matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/, {
+    message: 'El nombre solo puede contener letras, espacios, guiones y apóstrofes',
+  })
   fullName?: string;
 
   @ApiPropertyOptional({ example: '+5215512345678' })

@@ -27,3 +27,6 @@ pg16-dump-*.sql
 
 # Evidencia local de QA (capturas, resultados, logs); se regenera con las pruebas
 qa-artifacts/
+
+# Certificados de desarrollo móvil
+infra/mobile-cert/certs/

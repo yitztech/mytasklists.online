@@ -9,8 +9,7 @@ export type AuthProvider = 'local' | 'google' | 'apple';
 export type UserRole = 'user' | 'admin';
 export type DevicePlatform = 'ios' | 'android' | 'web';
 
-/** Idiomas de la interfaz, los correos y los avisos */
-export type { Locale as SupportedLocale } from './locales';
+export type { Locale as SupportedLocale, EnabledLocale } from './locales';
 import type { Locale as SupportedLocale, EnabledLocale } from './locales';
 /** Published clients only understand complete enabled catalogs. */
 export type Locale = EnabledLocale;

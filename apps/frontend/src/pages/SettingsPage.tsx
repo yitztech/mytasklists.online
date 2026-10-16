@@ -34,10 +34,19 @@ export function SettingsPage() {
 
   const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
+    const trimmed = fullName.trim();
+    if (trimmed.length < 2 || trimmed.length > 100 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜçÇàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÄËÏÖÜãõÃÕāēīōūĀĒĪŌŪ\s'.-]+$/.test(trimmed)) {
+      show({
+        title: t('settings.saveFailed'),
+        body: t('register.errors.fullName'),
+        variant: 'danger',
+      });
+      return;
+    }
     setSaving(true);
     try {
       const updated = await usersApi.updateProfile({
-        fullName: fullName.trim(),
+        fullName: trimmed,
         whatsapp: whatsapp.trim(),
         notificationsEnabled,
       });
@@ -119,6 +128,7 @@ export function SettingsPage() {
                 <input
                   id="profile-name"
                   className="form-control"
+                  maxLength={100}
                   value={fullName}
                   onChange={(event) => setFullName(event.target.value)}
                   data-testid="profile-fullname"
