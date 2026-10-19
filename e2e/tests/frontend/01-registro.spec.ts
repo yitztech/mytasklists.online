@@ -31,7 +31,7 @@ test.describe('Frontend web · registro de usuarios', () => {
   test('CP-WEB-002 · el formulario valida los cuatro campos obligatorios', async ({ page,request }) => {
     const {link}=await requestRegistration(request,uniqueEmail());
     await page.goto(link);
-    await page.getByTestId('register-fullname').fill('Ab');
+    await page.getByTestId('register-fullname').fill('A');
 
     await page.getByTestId('register-whatsapp').fill('123');
     await page.getByTestId('register-password').fill('corta');
