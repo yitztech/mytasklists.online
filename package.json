@@ -37,7 +37,18 @@
     "test:maestro": "npm --prefix apps/mobile run test:maestro",
     "evidence": "npm run evidence --workspace e2e",
     "release:check": "node scripts/mobile-rollout.mjs",
-    "test:rollout": "npm run build --workspace @lista/backend && node --test scripts/test-mobile-rollout.mjs"
+    "test:rollout": "npm run build --workspace @lista/backend && node --test scripts/test-mobile-rollout.mjs",
+    "test:unit": "node --test tests/backend/backend-unit-and-integration.test.mjs tests/frontend/frontend-unit-and-forms.test.mjs",
+    "test:backend": "npm run build --workspace @lista/backend && node --test tests/backend/backend-unit-and-integration.test.mjs",
+    "test:frontend": "node --test tests/frontend/frontend-unit-and-forms.test.mjs",
+    "test:db": "node --test tests/database/database-validation.test.mjs",
+    "test:database": "node --test tests/database/database-validation.test.mjs",
+    "test:mobile": "node --test tests/mobile/mobile-flows.test.mjs",
+    "test:gherkin": "npm run build --workspace @lista/backend && node e2e/gherkin-runner.mjs",
+    "test:integration": "npm run test:gherkin",
+    "test:all": "npm run test:backend && npm run test:frontend && npm run test:db && npm run test:mobile && npm run test:gherkin",
+    "mobile:certs": "./scripts/generate-mobile-certs.sh",
+    "mobile:certs:docker": "docker compose -f docker-compose.mobile-cert.yml up --build"
   },
   "engines": {
     "node": ">=22.12"

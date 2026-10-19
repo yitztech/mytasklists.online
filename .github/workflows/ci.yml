@@ -54,6 +54,8 @@ jobs:
       # Backend, web, panel y app móvil contra el mismo contrato
       - run: npm run typecheck
       - run: npm run build --workspaces --if-present
+      - name: Pruebas backend y frontend
+        run: npm run test:backend && npm run test:frontend
       - name: Seguridad Google y compatibilidad de idiomas
         run: node --test scripts/test-google-auth.cjs scripts/test-backend-locales.mjs
 

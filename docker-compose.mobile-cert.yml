@@ -1,0 +1,12 @@
+name: mytasklists-mobile-cert
+
+services:
+  mobile-cert:
+    build:
+      context: ./infra/mobile-cert
+      dockerfile: Dockerfile
+    container_name: lc-mobile-cert
+    volumes:
+      - ./infra/mobile-cert/certs:/certs
+    environment:
+      OUTPUT_DIR: /certs
