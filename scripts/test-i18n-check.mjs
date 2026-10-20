@@ -20,10 +20,11 @@ function fixture(t) {
   return dir;
 }
 
-test('current staged delivery passes without hiding its existing debt', () => {
+test('current staged delivery has complete catalog keys and keeps legacy literals visible', () => {
   const result = check();
   assert.deepEqual(result.errors, []);
-  assert.ok(result.collected.missing.length > 0);
+  assert.equal(result.collected.missing.length, 0);
+  assert.ok(Object.keys(result.collected.literals).length > 0);
 });
 
 test('removing the new French Google translation fails the real checker', t => {
@@ -72,7 +73,8 @@ test('plural categories follow locale rules; missing French many is reported', (
   assert.deepEqual(compareCatalog(source, target, 'en', 'test').missing, []);
 });
 
-test('incomplete locale cannot pass release gate', () => {
-  assert.ok(check(ROOT, { release: 'fr' }).errors.some(error => /Missing translation/.test(error)));
-  assert.ok(check(ROOT, { release: 'fr' }).errors.some(error => /legacy landing\/backend/.test(error)));
+test('locale with legacy uncatalogued templates cannot pass release gate', () => {
+  const errors = check(ROOT, { release: 'fr' }).errors;
+  assert.ok(!errors.some(error => /Missing translation/.test(error)));
+  assert.ok(errors.some(error => /legacy landing\/backend/.test(error)));
 });
