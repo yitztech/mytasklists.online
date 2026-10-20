@@ -80,7 +80,7 @@ export function DeleteAccountScreen({ navigation }: any) {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: Math.max(insets.bottom, 24) + spacing.xxl * 2 },
+          { paddingBottom: Math.max(insets.bottom, 48) + spacing.xxl * 3 },
         ]}
         testID="delete-account-screen"
       >
@@ -135,7 +135,7 @@ export function DeleteAccountScreen({ navigation }: any) {
             onPress={() => navigation.goBack()}
             style={{ marginTop: spacing.md }}
           />
-          <View style={{ height: Math.max(insets.bottom, 24) + spacing.lg }} />
+          <View style={{ height: Math.max(insets.bottom, 48) + spacing.xxl * 2 }} />
         </Card>
       </ScrollView>
     </KeyboardAvoidingView>

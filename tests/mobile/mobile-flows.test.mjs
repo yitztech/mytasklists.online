@@ -174,14 +174,13 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
       // Simula insets de Android con barra de 3 botones (48dp) y modo edge-to-edge
       const androidInsets = { top: 24, bottom: 48, left: 0, right: 0 };
       const spacingXxl = 32;
-      const spacingXl = 24;
 
-      const calculatedBottomPadding = Math.max(androidInsets.bottom, 24) + spacingXxl * 2;
-      const spacerHeight = Math.max(androidInsets.bottom, 24) + spacingXl;
+      const calculatedBottomPadding = Math.max(androidInsets.bottom, 48) + spacingXxl * 3;
+      const spacerHeight = Math.max(androidInsets.bottom, 48) + spacingXxl * 2;
 
-      // El padding inferior debe ser al menos 88dp (bien por encima de los 48dp de la barra del sistema)
-      assert.ok(calculatedBottomPadding >= 88, `Padding inferior ${calculatedBottomPadding}dp debe superar 88dp`);
-      assert.ok(spacerHeight >= 48, `Espaciador ${spacerHeight}dp debe superar la altura de los botones de Android`);
+      // El padding inferior debe ser al menos 144dp y el espaciador al menos 112dp para holgura total
+      assert.ok(calculatedBottomPadding >= 144, `Padding inferior ${calculatedBottomPadding}dp debe superar 144dp`);
+      assert.ok(spacerHeight >= 112, `Espaciador ${spacerHeight}dp debe superar 112dp de holgura tras el botón`);
     });
   });
 

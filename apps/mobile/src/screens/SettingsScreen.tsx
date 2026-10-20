@@ -36,7 +36,7 @@ export function SettingsScreen({ navigation }: any) {
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{
         padding: spacing.lg,
-        paddingBottom: Math.max(insets.bottom, 24) + spacing.xxl * 2,
+        paddingBottom: Math.max(insets.bottom, 48) + spacing.xxl * 3,
       }}
       testID="settings-screen"
     >
@@ -117,9 +117,9 @@ export function SettingsScreen({ navigation }: any) {
         variant="ghost"
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="delete-account-open"
-        style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
+        style={{ marginTop: spacing.md, marginBottom: spacing.md }}
       />
-      <View style={{ height: Math.max(insets.bottom, 24) + spacing.xl }} />
+      <View style={{ height: Math.max(insets.bottom, 48) + spacing.xxl * 2 }} />
     </ScrollView>
   );
 }
