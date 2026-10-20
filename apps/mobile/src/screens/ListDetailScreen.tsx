@@ -117,6 +117,37 @@ export function ListDetailScreen({ route, navigation }: any) {
   useSocketEvent('item:reactivated', onEvent);
   useSocketEvent('item:overdue', onEvent);
   useSocketEvent('list:updated', onEvent);
+  useSocketEvent('list:deleted', (payload: { listId?: string }) => {
+    if (payload?.listId === listId) {
+      Alert.alert(t('detail.deletedTitle'), t('detail.deletedBody'));
+      navigation.goBack();
+    }
+  });
+
+  const deleteList = () => {
+    Alert.alert(
+      t('detail.deleteList'),
+      `${t('detail.confirmDelete')}\n\n"${list?.name ?? ''}"`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('detail.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await listsApi.remove(listId);
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert(t('common.oops'), (error as Error).message || t('detail.failures.deleteList'));
+            } finally {
+              setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const guard = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -240,6 +271,17 @@ export function ListDetailScreen({ route, navigation }: any) {
         <Pressable onPress={() => setShowShare((value) => !value)} testID="share-button">
           <Text style={styles.linkAction}>{t('detail.share')}</Text>
         </Pressable>
+        {list.ownerId === user?.id && (
+          <Pressable
+            onPress={deleteList}
+            disabled={busy}
+            testID="delete-list-button"
+            accessibilityLabel={t('detail.deleteList')}
+            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingVertical: 8, paddingHorizontal: 4 }]}
+          >
+            <Text style={[styles.linkAction, { color: colors.danger }]}>{t('detail.deleteList')}</Text>
+          </Pressable>
+        )}
       </View>
 
       {showShare && (
@@ -359,6 +401,17 @@ export function ListDetailScreen({ route, navigation }: any) {
         </>
       )}
       {editingItem && <EditItemModal key={editingItem.id} item={editingItem} onClose={() => setEditingItem(null)} onSaved={() => { void load(); }} />}
+      {list.ownerId === user?.id && (
+        <View style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
+          <Button
+            title={t('detail.deleteList')}
+            variant="danger"
+            onPress={deleteList}
+            disabled={busy}
+            testID="delete-list-button-bottom"
+          />
+        </View>
+      )}
     </ScrollView>
   );
 }

@@ -108,6 +108,13 @@ export const fr: Catalog<typeof es> = {
     whatToDo: 'Que voulez-vous faire ?',
     delete: 'Supprimer',
     advance: 'Avancer de 14 jours',
+    deleteList: 'Supprimer la liste',
+    confirmDelete: 'Supprimer toute la liste ? Cette action est irréversible.',
+    deletedTitle: 'Liste supprimée',
+    deletedBody: 'Vous n’avez plus accès à cette liste',
+    failures: {
+      deleteList: 'Impossible de supprimer la liste',
+    },
   },
   item: {
     addedOn: 'Ajouté le {{date}}',

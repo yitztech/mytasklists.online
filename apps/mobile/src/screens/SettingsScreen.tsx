@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button, Card } from '../components/ui';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -12,6 +13,7 @@ import { ApiError } from '../api/client';
 import { colors, spacing } from '../theme';
 
 export function SettingsScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { connected } = useSocket();
   const { pushToken, permission } = usePush();
@@ -32,7 +34,10 @@ export function SettingsScreen({ navigation }: any) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: spacing.lg }}
+      contentContainerStyle={{
+        padding: spacing.lg,
+        paddingBottom: Math.max(insets.bottom, 24) + spacing.xxl * 2,
+      }}
       testID="settings-screen"
     >
       <Button title="Premium" variant="ghost" onPress={()=>navigation.navigate("Billing")} testID="my-plan"/>
@@ -112,8 +117,9 @@ export function SettingsScreen({ navigation }: any) {
         variant="ghost"
         onPress={() => navigation.navigate('DeleteAccount')}
         testID="delete-account-open"
-        style={{ marginTop: spacing.md }}
+        style={{ marginTop: spacing.md, marginBottom: spacing.sm }}
       />
+      <View style={{ height: Math.max(insets.bottom, 24) + spacing.xl }} />
     </ScrollView>
   );
 }

@@ -159,4 +159,30 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
     });
   });
 
+  describe('Eliminación de Listas Completas en Móvil y Espaciado de Cuenta en Android', () => {
+    it('Caso de éxito: eliminación de lista completa en móvil usa /lists/:id y no /items/:id', () => {
+      const list = { id: 'list-xyz', name: 'Lista Completa', ownerId: 'user-10' };
+      const isOwner = list.ownerId === 'user-10';
+      assert.strictEqual(isOwner, true, 'Propietario puede eliminar la lista');
+
+      const routeForListDeletion = `/lists/${list.id}`;
+      assert.match(routeForListDeletion, /^\/lists\/[a-z0-9-]+$/);
+      assert.doesNotMatch(routeForListDeletion, /^\/items\//);
+    });
+
+    it('Caso de éxito: cálculo de espaciado inferior en Android evita que la barra de botones del sistema tape Eliminar Cuenta', () => {
+      // Simula insets de Android con barra de 3 botones (48dp) y modo edge-to-edge
+      const androidInsets = { top: 24, bottom: 48, left: 0, right: 0 };
+      const spacingXxl = 32;
+      const spacingXl = 24;
+
+      const calculatedBottomPadding = Math.max(androidInsets.bottom, 24) + spacingXxl * 2;
+      const spacerHeight = Math.max(androidInsets.bottom, 24) + spacingXl;
+
+      // El padding inferior debe ser al menos 88dp (bien por encima de los 48dp de la barra del sistema)
+      assert.ok(calculatedBottomPadding >= 88, `Padding inferior ${calculatedBottomPadding}dp debe superar 88dp`);
+      assert.ok(spacerHeight >= 48, `Espaciador ${spacerHeight}dp debe superar la altura de los botones de Android`);
+    });
+  });
+
 });

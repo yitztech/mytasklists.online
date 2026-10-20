@@ -16,10 +16,10 @@ export class DistributionController {
 
  @Public() @Get()
  async manifest(){
-  let apk:null|{url:string;version:string;size:number;sha256:string}=null;
+  let apk:null|{url:string;version:string;size:number;sha256:string;githubReleaseUrl?:string}=null;
   const root=process.env.DOWNLOADS_DIR||'/downloads';
   try{const m=JSON.parse(await readFile(join(root,'android.json'),'utf8'));const file=basename(m.file||'');
-   if(file===m.file&&/\.apk$/.test(file)&&/^[a-f0-9]{64}$/.test(m.sha256)&&typeof m.version==='string'&&m.signed===true){const info=await stat(join(root,file));const key=file+':'+info.size+':'+info.mtimeMs+':'+m.sha256;if(this.artifactCheck?.key!==key)this.artifactCheck={key,valid:createHash('sha256').update(await readFile(join(root,file))).digest('hex')===m.sha256};if(info.isFile()&&info.size===m.size&&this.artifactCheck.valid)apk={url:'/downloads/'+encodeURIComponent(file),version:m.version,size:info.size,sha256:m.sha256};}
+   if(file===m.file&&/\.apk$/.test(file)&&/^[a-f0-9]{64}$/.test(m.sha256)&&typeof m.version==='string'&&m.signed===true){const info=await stat(join(root,file));const key=file+':'+info.size+':'+info.mtimeMs+':'+m.sha256;if(this.artifactCheck?.key!==key)this.artifactCheck={key,valid:createHash('sha256').update(await readFile(join(root,file))).digest('hex')===m.sha256};if(info.isFile()&&info.size===m.size&&this.artifactCheck.valid)apk={url:'/downloads/'+encodeURIComponent(file),version:m.version,size:info.size,sha256:m.sha256,githubReleaseUrl:`https://github.com/yitztech/mytasklists.online/releases/download/v${encodeURIComponent(m.version)}/${encodeURIComponent(file)}`};}
   }catch{/* No download until a verified signed artifact is published. */}
   return {android:{storeUrl:await this.availableStore(process.env.ANDROID_STORE_PUBLISHED==='true'?allowed(process.env.MOBILE_STORE_URL_ANDROID,'play.google.com'):null),apk},ios:{storeUrl:await this.availableStore(process.env.IOS_STORE_PUBLISHED==='true'?allowed(process.env.MOBILE_STORE_URL_IOS,'apps.apple.com'):null),testflightUrl:allowed(process.env.IOS_TESTFLIGHT_URL,'testflight.apple.com')}};
  }

@@ -108,6 +108,13 @@ export const pt: Catalog<typeof es> = {
     whatToDo: 'O que deseja fazer?',
     delete: 'Excluir',
     advance: 'Avançar 14 dias',
+    deleteList: 'Excluir a lista',
+    confirmDelete: 'Excluir a lista inteira? Esta ação não pode ser desfeita.',
+    deletedTitle: 'Lista excluída',
+    deletedBody: 'Você não tem mais acesso a esta lista',
+    failures: {
+      deleteList: 'Não foi possível excluir a lista',
+    },
   },
   item: {
     addedOn: 'Adicionado em {{date}}',

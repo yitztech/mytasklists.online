@@ -1,0 +1,57 @@
+name: Publicar Release en GitHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión del release (ej: 2.5.0)'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publicar GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Determinar versión y etiqueta
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="v${{ inputs.version }}"
+            VER="${{ inputs.version }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+          echo "apk_file=downloads/mytasklists-${VER}.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Crear o actualizar Release en GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.vars.outputs.tag }}
+          VER: ${{ steps.vars.outputs.version }}
+          APK: ${{ steps.vars.outputs.apk_file }}
+        run: |
+          if [ -f "$APK" ]; then
+            gh release create "$TAG" "$APK" \
+              --title "Release $TAG" \
+              --notes "Versión $VER de MyTaskLists. Incluye la descarga directa del APK firmado para Android." \
+              --clobber || gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" \
+              --title "Release $TAG" \
+              --notes "Versión $VER de MyTaskLists." \
+              --clobber || true
+          fi

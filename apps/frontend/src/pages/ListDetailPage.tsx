@@ -285,7 +285,7 @@ export function ListDetailPage() {
 
             {list.ownerId === user.id && (
               <button
-                className="btn btn-outline-danger px-3"
+                className="btn btn-outline-danger px-3 d-inline-flex align-items-center gap-2"
                 onClick={deleteList}
                 disabled={busy}
                 data-testid="delete-list-button"
@@ -293,6 +293,7 @@ export function ListDetailPage() {
                 title={t('detail.deleteList')}
               >
                 <i className="bi bi-trash" aria-hidden="true" />
+                <span>{t('detail.deleteList')}</span>
               </button>
             )}
           </div>

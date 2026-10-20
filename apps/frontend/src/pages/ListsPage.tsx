@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { listsApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { useSocketEvent } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner } from '../components/Spinner';
@@ -13,6 +14,7 @@ const COLORS = ['#1d5b45', '#c8371f', '#d99a00', '#2f6f9f', '#7a3e7e', '#4b5a52'
 const ICONS = ['🛒', '🥑', '🧴', '🔨', '🎉', '🐶'];
 
 export function ListsPage() {
+  const { user } = useAuth();
   const [lists, setLists] = useState<ListSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -45,6 +47,27 @@ export function ListsPage() {
   useSocketEvent('list:updated', load);
   useSocketEvent('list:deleted', load);
   useSocketEvent('list:member-added', load);
+
+  const deleteList = async (list: ListSummary, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!window.confirm(t('detail.confirmDelete'))) return;
+    try {
+      await listsApi.remove(list.id);
+      show({
+        title: t('detail.deletedTitle'),
+        body: t('detail.deletedBody'),
+        variant: 'success',
+      });
+      await load();
+    } catch (err) {
+      show({
+        title: t('detail.failures.deleteList'),
+        body: err instanceof ApiError ? err.message : t('detail.failures.deleteList'),
+        variant: 'danger',
+      });
+    }
+  };
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
@@ -219,16 +242,32 @@ export function ListsPage() {
                     </h2>
                     {list.description && <p className="text-muted small mb-0 text-truncate">{list.description}</p>}
                   </div>
-                  {list.isShared && (
-                    <span
-                      className="lc-chip"
-                      data-testid="list-shared-badge"
-                      title={t('detail.members', { count: list.memberCount })}
-                    >
-                      <i className="bi bi-people" aria-hidden="true" />
-                      {list.memberCount}
-                    </span>
-                  )}
+                  <div className="d-flex align-items-center gap-1 ms-auto">
+                    {list.isShared && (
+                      <span
+                        className="lc-chip"
+                        data-testid="list-shared-badge"
+                        title={t('detail.members', { count: list.memberCount })}
+                      >
+                        <i className="bi bi-people" aria-hidden="true" />
+                        {list.memberCount}
+                      </span>
+                    )}
+                    {list.ownerId === user?.id && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger p-1 d-inline-flex align-items-center justify-content-center"
+                        style={{ width: 32, height: 32, borderRadius: 8 }}
+                        onClick={(event) => void deleteList(list, event)}
+                        data-testid="delete-list-button"
+                        data-list-id={list.id}
+                        aria-label={`${t('detail.deleteList')}: ${list.name}`}
+                        title={t('detail.deleteList')}
+                      >
+                        <i className="bi bi-trash" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="lc-list-stats">
