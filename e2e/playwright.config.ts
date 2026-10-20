@@ -3,26 +3,29 @@ import { defineConfig, devices } from '@playwright/test';
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8080';
 const MOBILE_URL = process.env.E2E_MOBILE_URL ?? 'http://localhost:19006';
 
+const isCI = !!process.env.CI;
+
 /**
- * Configuración de las pruebas end-to-end.
- *
- * Un proyecto por servicio:
- *   backend-api → pruebas de la API (sin interfaz, sin video)
- *   frontend    → aplicación web de usuarios      (video por caso)
- *   dashboard   → panel de administración         (video por caso)
- *   landing     → página pública de descargas     (video por caso)
- *   mobile-app  → app React Native servida en web (video por caso)
- *
- * Los videos se reorganizan al terminar en `evidence/<servicio>/<caso>.webm`
- * (ver utils/global-teardown.ts).
+ * El video se graba únicamente en local cuando se solicita de manera explícita:
+ *   RECORD_VIDEO=true o E2E_RECORD_VIDEO=true
+ * En despliegues / CI y por defecto permanece desactivado ('off') para máximo rendimiento.
  */
+const shouldRecordVideo = !isCI && (process.env.RECORD_VIDEO === 'true' || process.env.E2E_RECORD_VIDEO === 'true');
+const videoSetting = (size: { width: number; height: number }) =>
+  shouldRecordVideo ? ({ mode: 'on' as const, size }) : ('off' as const);
+
 export default defineConfig({
   testDir: './tests',
   outputDir: './test-results',
   fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  workers: 1,
+  forbidOnly: isCI,
+  retries: isCI ? 1 : 0,
+
+  // Aprovecha al máximo los núcleos de CPU disponibles en el runner/entorno de ejecución,
+  // permitiendo sobrescritura manual con PLAYWRIGHT_WORKERS si se desea.
+  workers: process.env.PLAYWRIGHT_WORKERS
+    ? Number(process.env.PLAYWRIGHT_WORKERS)
+    : (isCI ? '100%' : undefined),
   timeout: 60_000,
   expect: { timeout: 10_000 },
 
@@ -30,7 +33,6 @@ export default defineConfig({
 
   reporter: [
     ['list'],
-    // Guarda un video con nombre legible por cada caso con interfaz
     ['./utils/evidence-reporter.ts'],
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     ['json', { outputFile: 'playwright-report/resultados.json' }],
@@ -65,7 +67,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: BASE_URL,
         viewport: { width: 1280, height: 800 },
-        video: { mode: 'on', size: { width: 1280, height: 800 } },
+        video: videoSetting({ width: 1280, height: 800 }),
       },
     },
 
@@ -77,7 +79,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: BASE_URL,
         viewport: { width: 1440, height: 900 },
-        video: { mode: 'on', size: { width: 1440, height: 900 } },
+        video: videoSetting({ width: 1440, height: 900 }),
       },
     },
 
@@ -89,7 +91,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         baseURL: BASE_URL,
         viewport: { width: 1280, height: 900 },
-        video: { mode: 'on', size: { width: 1280, height: 900 } },
+        video: videoSetting({ width: 1280, height: 900 }),
       },
     },
 
@@ -100,7 +102,7 @@ export default defineConfig({
       use: {
         ...devices['Pixel 7'],
         baseURL: MOBILE_URL,
-        video: { mode: 'on', size: { width: 412, height: 915 } },
+        video: videoSetting({ width: 412, height: 915 }),
       },
     },
   ],

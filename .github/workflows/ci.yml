@@ -72,11 +72,15 @@ jobs:
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
       - run: node scripts/audit-dependencies.mjs
 
-  e2e:
-    name: Pruebas e2e
+  e2e-shards:
+    name: Shard ${{ matrix.shard }}
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -86,24 +90,63 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             apps/mobile/package-lock.json
+
+      - name: Cache de navegadores Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Cache bundle web de app móvil
+        uses: actions/cache@v4
+        with:
+          path: apps/mobile/dist
+          key: mobile-dist-${{ runner.os }}-${{ hashFiles('apps/mobile/**', 'packages/**') }}
+
       - name: Levantar la pila
+        env:
+          DOCKER_BUILDKIT: 1
+          COMPOSE_DOCKER_CLI_BUILD: 1
         run: |
           cp .env.example .env
           docker compose up -d --build --wait
+
       - run: npm ci --no-audit --no-fund
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
-      - run: npm run install:browsers --workspace @lista/e2e
-      - run: npm run test:e2e
+
+      - name: Instalar navegadores Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npm run install:browsers --workspace @lista/e2e
+
+      - name: Ejecutar pruebas e2e (shard ${{ matrix.shard }})
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}
+
       - name: Logs de la pila
         if: failure()
-        run: docker compose logs --no-color > compose.log
+        run: docker compose logs --no-color > compose-${{ strategy.job-index }}.log
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: e2e-evidencia
+          name: e2e-evidencia-shard-${{ strategy.job-index }}
           path: |
             e2e/playwright-report
             e2e/evidence
-            compose.log
+            compose-*.log
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
+
+  e2e:
+    name: Pruebas e2e
+    needs: [build, e2e-shards]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar todos los shards de pruebas e2e
+        run: |
+          if [ "${{ needs.e2e-shards.result }}" != "success" ]; then
+            echo "::error::Uno o más shards de pruebas e2e fallaron (${{ needs.e2e-shards.result }})."
+            exit 1
+          fi
+          echo "✅ Todos los shards de pruebas e2e pasaron exitosamente."
