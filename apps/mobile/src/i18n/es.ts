@@ -109,6 +109,13 @@ export const es = {
     whatToDo: '¿Qué quieres hacer?',
     delete: 'Eliminar',
     advance: 'Adelantar 14 días',
+    deleteList: 'Eliminar la lista',
+    confirmDelete: '¿Eliminar la lista completa? Esta acción no se puede deshacer.',
+    deletedTitle: 'Lista eliminada',
+    deletedBody: 'Ya no tienes acceso a esta lista',
+    failures: {
+      deleteList: 'No se pudo eliminar la lista',
+    },
   },
   item: {
     addedOn: 'Agregado {{date}}',

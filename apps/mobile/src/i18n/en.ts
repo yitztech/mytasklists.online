@@ -109,6 +109,13 @@ export const en: Catalog<typeof es> = {
     whatToDo: 'What do you want to do?',
     delete: 'Delete',
     advance: 'Move forward 14 days',
+    deleteList: 'Delete the list',
+    confirmDelete: 'Delete the whole list? This cannot be undone.',
+    deletedTitle: 'List deleted',
+    deletedBody: 'You no longer have access to this list',
+    failures: {
+      deleteList: 'Could not delete the list',
+    },
   },
   item: {
     addedOn: 'Added {{date}}',

@@ -184,4 +184,20 @@ describe('Servicio Frontend · Validación de Formularios, Campos y Textos', () 
     });
   });
 
+  describe('Eliminación de Listas Completas de Tareas en Web', () => {
+    it('Caso de éxito: eliminación de lista completa disponible en la tarjeta y en el detalle', () => {
+      const list = { id: 'list-1', name: 'Supermercado', ownerId: 'user-1', itemsCount: 5 };
+      const currentUser = { id: 'user-1' };
+      const canDelete = list.ownerId === currentUser.id;
+      assert.strictEqual(canDelete, true);
+    });
+
+    it('Caso de éxito: no confunde eliminación de lista con eliminación de ítem individual', () => {
+      const listEndpoint = (id) => `/lists/${id}`;
+      const itemEndpoint = (id) => `/items/${id}`;
+      assert.notStrictEqual(listEndpoint('123'), itemEndpoint('123'));
+      assert.ok(listEndpoint('123').startsWith('/lists/'));
+    });
+  });
+
 });

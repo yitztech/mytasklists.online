@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -11,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Field, ListTile, PlusGlyph } from '../components/ui';
 import { listsApi } from '../api/endpoints';
+import { useAuth } from '../context/AuthContext';
 import { useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { ListSummary } from '../types';
@@ -18,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ListsScreen({ navigation }: any) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   // Margen de la barra del sistema de Android (de borde a borde)
   const insets = useSafeAreaInsets();
   const [lists, setLists] = useState<ListSummary[] | null>(null);
@@ -45,7 +48,30 @@ export function ListsScreen({ navigation }: any) {
   useSocketEvent('item:removed', load);
   useSocketEvent('item:reactivated', load);
   useSocketEvent('list:updated', load);
+  useSocketEvent('list:deleted', load);
   useSocketEvent('list:member-added', load);
+
+  const confirmDeleteList = (list: ListSummary) => {
+    Alert.alert(
+      t('detail.deleteList'),
+      `${t('detail.confirmDelete')}\n\n"${list.name}"`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('detail.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await listsApi.remove(list.id);
+              await load();
+            } catch (error) {
+              Alert.alert(t('common.oops'), (error as Error).message || t('detail.failures.deleteList'));
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const create = async () => {
     if (!name.trim()) return;
@@ -129,6 +155,7 @@ export function ListsScreen({ navigation }: any) {
             testID="list-card"
             accessibilityLabel={list.name}
             onPress={() => navigation.navigate('ListDetail', { id: list.id, name: list.name })}
+            onLongPress={() => confirmDeleteList(list)}
             style={({ pressed }) => [styles.card, pressed && { backgroundColor: '#f8faf7' }]}
           >
             <ListTile icon={list.icon} color={list.color} />
@@ -145,6 +172,21 @@ export function ListsScreen({ navigation }: any) {
                 {list.isShared && <Badge tone="success" text={t('lists.people', { count: list.memberCount })} />}
               </View>
             </View>
+            {list.ownerId === user?.id && (
+              <Pressable
+                testID="delete-list-button"
+                accessibilityLabel={`${t('detail.deleteList')}: ${list.name}`}
+                accessibilityRole="button"
+                hitSlop={12}
+                onPress={() => confirmDeleteList(list)}
+                style={({ pressed }) => [
+                  styles.deleteListButton,
+                  pressed && { opacity: 0.5 },
+                ]}
+              >
+                <Text style={styles.deleteListIcon} aria-hidden={true}>🗑️</Text>
+              </Pressable>
+            )}
           </Pressable>
         )}
       />
@@ -171,6 +213,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
     ...shadow.card,
+  },
+  deleteListButton: {
+    padding: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.xs,
+  },
+  deleteListIcon: {
+    fontSize: 18,
   },
   name: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -0.25 },
   badges: { flexDirection: 'row', gap: spacing.xs, marginTop: 6, flexWrap: 'wrap' },

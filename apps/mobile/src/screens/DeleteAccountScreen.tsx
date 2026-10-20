@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Field } from '../components/ui';
@@ -15,6 +16,7 @@ import { colors, spacing } from '../theme';
  * revoque Sign in with Apple.
  */
 export function DeleteAccountScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { user, forgetSession } = useAuth();
   const { t } = useTranslation();
   const [hasPassword, setHasPassword] = useState(user?.provider === 'local');
@@ -75,7 +77,13 @@ export function DeleteAccountScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <ScrollView contentContainerStyle={styles.container} testID="delete-account-screen">
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: Math.max(insets.bottom, 24) + spacing.xxl * 2 },
+        ]}
+        testID="delete-account-screen"
+      >
         <Card>
           <Text style={styles.title}>{t('deleteAccount.heading')}</Text>
           <Text style={styles.body}>{t('deleteAccount.what')}</Text>
@@ -127,6 +135,7 @@ export function DeleteAccountScreen({ navigation }: any) {
             onPress={() => navigation.goBack()}
             style={{ marginTop: spacing.md }}
           />
+          <View style={{ height: Math.max(insets.bottom, 24) + spacing.lg }} />
         </Card>
       </ScrollView>
     </KeyboardAvoidingView>

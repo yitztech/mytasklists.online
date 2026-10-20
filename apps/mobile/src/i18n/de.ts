@@ -108,6 +108,13 @@ export const de: Catalog<typeof es> = {
     whatToDo: 'Was möchtest du tun?',
     delete: 'Löschen',
     advance: '14 Tage vorziehen',
+    deleteList: 'Liste löschen',
+    confirmDelete: 'Ganze Liste löschen? Dies kann nicht rückgängig gemacht werden.',
+    deletedTitle: 'Liste gelöscht',
+    deletedBody: 'Du hast keinen Zugriff mehr auf diese Liste',
+    failures: {
+      deleteList: 'Liste konnte nicht gelöscht werden',
+    },
   },
   item: {
     addedOn: 'Hinzugefügt am {{date}}',
