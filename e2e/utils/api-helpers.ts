@@ -46,7 +46,11 @@ export async function registerUser(
     password: overrides.password ?? DEFAULT_PASSWORD,
   };
 
-  const initiate = await request.post(`${API_URL}/auth/registration/request`, { data: {email: payload.email} });
+  let initiate = await request.post(`${API_URL}/auth/registration/request`, { data: { email: payload.email } });
+  if (initiate.status() === 429) {
+    await new Promise((r) => setTimeout(r, 1200));
+    initiate = await request.post(`${API_URL}/auth/registration/request`, { data: { email: payload.email } });
+  }
   if (!initiate.ok()) throw new Error(`No se pudo solicitar registro: ${initiate.status()}`);
   const mail = await waitForEmail(request, payload.email, 'Completa tu registro');
   const token = tokenFromEmail(mail, '/app/register/complete');
