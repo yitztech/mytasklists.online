@@ -151,9 +151,7 @@ export class DistributionController {
     }
 
     let apk: ApkDistribution | null = localApk;
-    const githubEnabled =
-      process.env.GITHUB_DISTRIBUTION_ENABLED === 'true' ||
-      (process.env.NODE_ENV === 'production' && process.env.GITHUB_DISTRIBUTION_ENABLED !== 'false');
+    const githubEnabled = process.env.GITHUB_DISTRIBUTION_ENABLED === 'true';
 
     if (githubEnabled) {
       try {
