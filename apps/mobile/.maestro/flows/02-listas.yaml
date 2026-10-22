@@ -38,12 +38,21 @@ name: Listas · crear una lista, agregar un producto y comprarlo
 - takeScreenshot: listas-producto-pendiente
 
 # Tocar el producto lo marca como comprado y baja a la lista de comprados
-- tapOn: Pilas AA
+- tapOn:
+    id: item-checkbox
+# En un emulador lento el toque puede llegar como pulsación larga, que abre el menú del producto
+- runFlow:
+    when:
+      visible: ¿Qué quieres hacer\?
+    commands:
+      - tapOn: (?i)cancelar
+      - tapOn:
+          id: item-checkbox
 - scrollUntilVisible:
     element:
       id: purchased-item
     direction: DOWN
-    timeout: 10000
+    timeout: 30000
 - assertNotVisible:
     id: pending-item
 - takeScreenshot: listas-producto-comprado
