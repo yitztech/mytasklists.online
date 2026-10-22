@@ -1,10 +1,10 @@
-import { Picker } from '@react-native-picker/picker';
 import UNITS from '../../../../packages/ui-data/units.json';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Button } from './ui';
 import { ItemPhotoPicker } from './ItemPhotoPicker';
+import { SelectField } from './SelectField';
 import { itemsApi } from '../api/endpoints';
 import { API_URL } from '../api/client';
 import { colors, radius, spacing } from '../theme';
@@ -34,7 +34,7 @@ export function EditItemModal({ item, onClose, onSaved }: { item: Item | null; o
     <Text style={styles.label}>{t('editItem.name')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.name')} testID="edit-item-name" value={name} onChangeText={setName} maxLength={140} />
     <Text style={styles.label}>{t('editItem.note')}</Text><TextInput style={[styles.input, { minHeight: 76 }]} accessibilityLabel={t('editItem.note')} value={note} onChangeText={setNote} multiline maxLength={300} />
     <Text style={styles.label}>{t('editItem.quantity')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.quantity')} testID="edit-item-quantity" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
-    <Text style={styles.label}>{t('editItem.unit')}</Text><Picker accessibilityLabel={t('editItem.unit')} testID="edit-item-unit" selectedValue={unit} onValueChange={setUnit} style={{ color: colors.ink }}>{localizedUnits(i18n.language).map((u) => <Picker.Item key={u.value} label={u.label} value={u.value} />)}<Picker.Item label={t('editItem.custom')} value="custom" /></Picker>
+    <Text style={styles.label}>{t('editItem.unit')}</Text><SelectField label={t('editItem.unit')} testID="edit-item-unit" value={unit} onChange={setUnit} options={[...localizedUnits(i18n.language), { label: t('editItem.custom'), value: 'custom' }]} />
     {unit === 'custom' && <TextInput accessibilityLabel={t('editItem.unitName')} style={styles.input} testID="edit-custom-unit" value={customUnit} onChangeText={setCustomUnit} maxLength={20} />}
     <View style={styles.switchRow}><Text style={styles.label}>{t('editItem.repeat')}</Text><Switch value={recurring} onValueChange={setRecurring} trackColor={{ true: colors.brand }} /></View>
     {recurring && <><Text style={styles.label}>{t('editItem.repeatEvery')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.repeatEvery')} value={days} onChangeText={setDays} keyboardType="number-pad" /></>}

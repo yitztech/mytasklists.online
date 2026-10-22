@@ -1,5 +1,4 @@
 import { useAuth } from '../context/AuthContext';
-import { Picker } from '@react-native-picker/picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { Badge, Button, SectionLabel } from '../components/ui';
 import { ItemRow } from '../components/ItemRow';
 import { PurchasedRow } from '../components/PurchasedRow';
 import { ItemPhotoPicker } from '../components/ItemPhotoPicker';
+import { SelectField } from '../components/SelectField';
 import { EditItemModal } from '../components/EditItemModal';
 import { itemsApi, listsApi, type PendingInvitation } from '../api/endpoints';
 import { useSocket, useSocketEvent } from '../context/SocketContext';
@@ -210,10 +210,7 @@ export function ListDetailScreen({ route, navigation }: any) {
         <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('detail.quantity')}</Text>
         <TextInput accessibilityLabel={t('detail.quantity')} style={styles.addInput} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" testID="item-quantity-input"/>
         <Text style={{color:colors.ink}}>{t('detail.unit')}</Text>
-        <Picker accessibilityLabel={t('detail.unit')} selectedValue={unit} onValueChange={setUnit} testID="item-unit-input" style={{color:colors.ink}}>
-          {localizedUnits(i18n.language).map(u=><Picker.Item key={u.value} label={u.label} value={u.value}/>)}
-          <Picker.Item label={t('detail.customUnit')} value="custom"/>
-        </Picker>
+        <SelectField label={t('detail.unit')} value={unit} onChange={setUnit} testID="item-unit-input" options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:'custom'}]}/>
         {unit==='custom' && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
         <Text style={{ color: colors.ink, marginTop: spacing.md }}>{t('detail.photoOptional')}</Text><ItemPhotoPicker uri={photo} onChange={setPhoto} />
         <View style={styles.recurRow}>
