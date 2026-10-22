@@ -32,15 +32,14 @@
           </svg>
           <span>MyTaskLists</span>
         </a>
-        <nav class="nav-links" aria-label="Principal">
+        <nav class="nav-links" aria-label="Principal" data-i18n-aria="nav.main">
           <a class="nav-text" href="#funciones" data-i18n="nav.features">Funciones</a>
           <a class="nav-text" href="#como-funciona" data-i18n="nav.how">Cómo funciona</a>
-          <a class="nav-text" href="__PRICING_URL__">Precios</a>
+          <a class="nav-text" href="__PRICING_URL__" data-i18n="nav.pricing">Precios</a>
           <a class="nav-text" href="__DOWNLOAD_URL__" data-testid="nav-download" data-i18n="nav.download">Descargar</a>
           <a class="btn btn-ghost" href="__LOGIN_URL__" data-testid="open-web-app" data-i18n="nav.openApp">Ingresar</a>
-          <div class="lang" role="group" aria-label="Idioma / Language" data-testid="language-switcher">
-            <a href="/" data-lang="es" data-testid="language-es" lang="es">ES</a>
-            <a href="/en/" data-lang="en" data-testid="language-en" lang="en">EN</a>
+          <div class="lang" role="group" aria-label="Idioma / Language" data-i18n-aria="language.label" data-testid="language-switcher">
+            __LANGUAGE_LINKS__
           </div>
         </nav>
       </div>
@@ -69,7 +68,7 @@
                 </svg>
                 <span>
                   <small data-i18n="store.iosSmall">Usar en</small>
-                  <strong>iPhone y iPad</strong>
+                  <strong data-i18n="store.iphone">iPhone y iPad</strong>
                 </span>
               </a>
 
@@ -352,9 +351,9 @@
         <span>
           <a href="__APP_URL__" data-i18n="footer.app">App web</a> ·
           <a href="/dashboard/" data-i18n="footer.panel">Panel</a> ·
-          <a href="/privacidad" data-privacy-link data-testid="footer-privacy" data-i18n="footer.privacy">Privacidad</a> ·
-          <a href="/terminos" data-terms-link data-testid="footer-terms" data-i18n="footer.terms">Condiciones</a> ·
-          <a href="__PRICING_URL__">Precios</a> · <a href="__DOWNLOAD_URL__">Descargar</a>
+          <a href="__PRIVACY_URL__" data-privacy-link data-testid="footer-privacy" data-i18n="footer.privacy">Privacidad</a> ·
+          <a href="__TERMS_URL__" data-terms-link data-testid="footer-terms" data-i18n="footer.terms">Condiciones</a> ·
+          <a href="__PRICING_URL__" data-i18n="nav.pricing">Precios</a> · <a href="__DOWNLOAD_URL__" data-i18n="nav.download">Descargar</a>
         </span>
       </div>
     </footer>

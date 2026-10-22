@@ -85,8 +85,12 @@ export function compareCatalog(source, target, locale, label) {
 
 const technicalAttributes = /^(className|class|id|key|type|role|href|src|name|value|testID|data-.+|style|variant|size|lang|htmlFor|target|rel|accessibilityRole)$/;
 const uiAttributes = /^(title|placeholder|alt|label|description|message|accessibilityLabel|accessibilityHint|aria-label|aria-description|aria-valuetext)$/;
-// Markup-only fragments (`<p> … </p>`) carry no copy of their own.
-const meaningful = text => /\p{L}/u.test(text.replace(/<\/?[a-z][^>]*>/gi, '')) && !/^(__[A-Z_]+__|https?:|\/|#[\da-f]+$)/i.test(text);
+// Markup, inline scripts, placeholders and the brand name carry no copy of their own.
+const copyOf = text => text
+  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+  .replace(/<[!/]?[a-z][^>]*>/gi, '')
+  .replace(/__[A-Z][A-Z_]+__|\bMyTaskLists\b/g, '');
+const meaningful = text => /\p{L}/u.test(copyOf(text)) && !/^(__[A-Z_]+__|https?:|\/|#[\da-f]+$)/i.test(text);
 
 /** AST guard: JSX text/attributes, conditional copy and alert/error call arguments.
  * For non-JSX legacy templates (mail, landing, notifications), every linguistic
@@ -102,6 +106,8 @@ export function uiLiterals(source, file) {
   const templateSurface = /apps\/landing\/|\/mail\.templates\.ts$|\/notification\.texts\.ts$|\/errors\.en\.ts$/.test(file);
   const visit = node => {
     if (ts.isJsxText(node)) add(node, node.text);
+    // Developer logs are not shown to users.
+    if (ts.isCallExpression(node) && /^console\./.test(node.expression.getText(ast))) return;
     if (ts.isTemplateExpression(node)) {
       const text = [node.head.text, ...node.templateSpans.map(span => span.literal.text)].join(' … ');
       if (templateSurface || (file.endsWith('.tsx') && /\p{L}{2,}/u.test(text))) add(node, text);

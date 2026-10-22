@@ -861,8 +861,19 @@ footer a:hover {
     margin-left: auto;
     padding-inline: 0.9rem;
   }
+  /* Con cinco idiomas el selector baja a su propia fila */
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 0.4rem;
+    padding-block: 0.5rem;
+  }
   .lang {
     margin-left: 0;
+  }
+  .lang a {
+    min-width: 2.25rem;
+    padding: 0 0.45rem;
   }
   .store-buttons {
     flex-direction: column;
