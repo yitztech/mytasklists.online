@@ -1,6 +1,6 @@
 # Plan: Google en móvil y cobertura de cinco idiomas
 
-Fecha: 2026-10-15. Estado: Fase G1 (código nativo, backend y tests criptográficos) y Fases I0+I1 (contratos comunes, linter AST, deuda congelada y CI) implementadas y verificadas en la rama fix/google-mobile-i18n-foundation. Pendiente: compilación de binario nuevo y pruebas físicas en dispositivo (G01–G09), y traducción por dominios (Fase I2).
+Fecha: 2026-10-15. Estado (2026-10-22): **Google en Android completado.** El APK directo 2.5.1 incluye el cliente OAuth Web que el backend acepta como audiencia (`GOOGLE_CLIENT_ID`), y el inicio de sesión con Google se comprobó en un dispositivo Android real. La traducción por dominios (Fase I2) también está completa: es, en, pt, de y fr habilitados (PR #24). Pendiente: Google en iOS (falta `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` y un binario iOS distribuible) y repetir G01–G09 en Play Store cuando exista ese canal (firma de Play App Signing con su propio SHA-1).
 
 ## 1. Diagnóstico de Google
 
