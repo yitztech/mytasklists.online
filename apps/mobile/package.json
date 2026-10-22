@@ -11,8 +11,8 @@
     "export:web": "expo export --platform web --output-dir dist",
     "serve:web": "npx --yes http-server dist -p 19006 -c-1 --proxy http://localhost:19006?",
     "typecheck": "tsc --noEmit",
-    "ios:release": "expo run:ios --configuration Release --no-bundler",
-    "test:maestro": "JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home} maestro test .maestro"
+    "ios:release": "node ../../scripts/mobile-gate.mjs ios && expo run:ios --configuration Release --no-bundler",
+    "test:maestro": "node ../../scripts/mobile-test.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",

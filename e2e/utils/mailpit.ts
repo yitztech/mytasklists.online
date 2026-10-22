@@ -4,12 +4,13 @@ import type { APIRequestContext } from '@playwright/test';
  * Lectura de la bandeja de Mailpit (SMTP de desarrollo del docker-compose),
  * para probar de punta a punta los correos de verificación y recuperación.
  */
-export const MAILPIT_URL = (process.env.E2E_MAILPIT_URL ?? 'http://localhost:8025').replace(/\/$/, '');
+export const MAILPIT_URL = (process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:8025').replace(/\/$/, '');
 
 interface MailpitSummary {
   ID: string;
   Subject: string;
   Created: string;
+  To: { Address: string }[];
 }
 
 export interface ReceivedEmail {
@@ -18,12 +19,20 @@ export interface ReceivedEmail {
   html: string;
 }
 
-/** Espera el último correo para `to` cuyo asunto contenga `subject` */
+/** IDs de los correos que ya recibió `to`: para ignorarlos al esperar uno nuevo con la misma dirección */
+export async function receivedEmailIds(request: APIRequestContext, to: string): Promise<Set<string>> {
+  const search = await request.get(`${MAILPIT_URL}/api/v1/search`, { params: { query: `to:"${to}"` } });
+  const { messages } = (await search.json()) as { messages: MailpitSummary[] };
+  return new Set(messages.map((message) => message.ID));
+}
+
+/** Espera el último correo para `to` cuyo asunto contenga `subject` (sin contar los de `ignore`) */
 export async function waitForEmail(
   request: APIRequestContext,
   to: string,
   subject: string,
   timeoutMs = 15_000,
+  ignore: Set<string> = new Set(),
 ): Promise<ReceivedEmail> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -32,13 +41,19 @@ export async function waitForEmail(
     });
     if (search.ok()) {
       const { messages } = (await search.json()) as { messages: MailpitSummary[] };
-      const match = messages.find((message) => message.Subject.includes(subject));
+      // La búsqueda de Mailpit es aproximada: se exige el destinatario exacto
+      const match = messages.find(
+        (message) =>
+          !ignore.has(message.ID) &&
+          message.Subject.includes(subject) &&
+          message.To.some((recipient) => recipient.Address.toLowerCase() === to.toLowerCase()),
+      );
       if (match) {
         const detail = await (await request.get(`${MAILPIT_URL}/api/v1/message/${match.ID}`)).json();
         return { subject: detail.Subject, text: detail.Text ?? '', html: detail.HTML ?? '' };
       }
     }
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
   throw new Error(`No llegó el correo "${subject}" para ${to} (¿está arriba Mailpit en ${MAILPIT_URL}?)`);
 }

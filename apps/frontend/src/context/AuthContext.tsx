@@ -4,13 +4,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { onUnauthorized, refreshSession, tokenStore } from '../api/client';
 import { authApi, usersApi } from '../api/endpoints';
-import { currentLanguage } from '../i18n';
+import { currentLanguage, setLanguage, type Language } from '../i18n';
 import { isMfaChallenge, type AuthProviders, type AuthResponse, type User } from '../types';
 
 /** Resultado del primer paso del login: sesión iniciada o reto de 2FA pendiente */
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     google: import.meta.env.VITE_GOOGLE_ENABLED !== 'false',
     apple: import.meta.env.VITE_APPLE_ENABLED !== 'false',
   });
+  const hydratedUserId = useRef<string | null>(null);
 
   const clearSession = useCallback(() => {
     tokenStore.clear();
@@ -55,14 +57,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => onUnauthorized(clearSession), [clearSession]);
 
-  // El backend escribe correos y avisos en `user.locale`: se iguala al idioma de la interfaz
+  // La cuenta es la fuente inicial; los cambios posteriores de interfaz se guardan
+  // para que web, app móvil, correos y avisos usen el mismo idioma.
   const { i18n } = useTranslation();
   useEffect(() => {
     const language = currentLanguage();
-    if (!user || user.locale === language) return;
+    if (!user) {
+      hydratedUserId.current = null;
+      return;
+    }
+    if (hydratedUserId.current !== user.id) {
+      hydratedUserId.current = user.id;
+      const accountLanguage = (user.preferredLocale ?? user.locale) as Language;
+      if (accountLanguage !== language) {
+        setLanguage(accountLanguage);
+        return;
+      }
+    }
+    if ((user.preferredLocale ?? user.locale) === language) return;
     usersApi
       .updateProfile({ locale: language })
-      .then((updated) => setUserState((current) => (current ? { ...current, locale: updated.locale } : current)))
+      .then((updated) => setUserState((current) => (current ? { ...current, ...updated } : current)))
       .catch(() => undefined);
   }, [user, i18n.language]);
 

@@ -8,7 +8,7 @@ test.describe('App móvil · idiomas', () => {
     await expect(page.getByTestId('login-screen')).toBeVisible();
     await expect(page.getByTestId('login-screen')).toContainText('Your shared lists, always in sync.');
 
-    await page.getByTestId('language-es').click();
+    await page.getByTestId('language-switcher').locator('select').selectOption('es');
     await expect(page.getByTestId('login-screen')).toContainText('Tus listas compartidas, siempre sincronizadas.');
 
     await page.reload();

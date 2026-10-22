@@ -1,13 +1,14 @@
 /**
  * Servidor estático mínimo para el bundle web de la app React Native.
- * Si el bundle no existe todavía, lo genera con `expo export`.
+ * Lo genera con `expo export` si no existe o si cambió el código de la app.
  */
 import { createServer } from 'node:http';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { extname, join, normalize } from 'node:path';
+import { mobileSourceHash } from '../../scripts/lib/mobile-verification.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -29,13 +30,24 @@ const MIME = {
   '.map': 'application/json',
 };
 
-if (!existsSync(join(DIST, 'index.html'))) {
+// Se regenera cuando cambia el código de la app; siempre contra la pila local (nunca producción)
+const sourceHash = mobileSourceHash();
+const stampFile = join(DIST, '.source-hash');
+const current = existsSync(stampFile) ? readFileSync(stampFile, 'utf8') : '';
+if (!existsSync(join(DIST, 'index.html')) || current !== sourceHash) {
   console.error('[mobile-web] generando el bundle web con expo export…');
-  await execFileAsync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist'], {
+  await execFileAsync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', 'dist', '--clear'], {
     cwd: MOBILE_DIR,
-    env: { ...process.env, CI: '1' },
+    env: {
+      ...process.env,
+      CI: '1',
+      EXPO_PUBLIC_API_URL: 'http://localhost:8080/api',
+      EXPO_PUBLIC_SOCKET_URL: 'http://localhost:8080',
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '',
+    },
     maxBuffer: 32 * 1024 * 1024,
   });
+  writeFileSync(stampFile, sourceHash);
 }
 
 createServer(async (req, res) => {

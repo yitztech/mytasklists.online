@@ -14,10 +14,21 @@ Cómo corre el proyecto en tu máquina, qué llega exactamente al servidor de pr
 | Entrada | `nginx` con `infra/nginx/conf.d` | `gateway` (imagen con la configuración dentro) | `nginx` con `infra/nginx/prod` |
 | Mailpit, Swagger, seed | sí | **no** | no |
 | Puertos en el host | 8080, 5432, 6379, 8025 (solo 127.0.0.1) | **ninguno** | 80 y 443 |
-| Pruebas e2e | sí (`npm run test:e2e`) | no | no |
+| Pruebas e2e | sí (`npm run test:e2e`; también en CI) | no | no |
+| App móvil | `apps/mobile/.env.development` → `http://localhost:8080` | `apps/mobile/.env.production` → `https://mytasklists.online` | — |
+| Pruebas de la app móvil | solo aquí, a pedido, en simulador (`npm run mobile:test`) | no | no |
 
-El entorno de desarrollo no cambia: `cp .env.example .env && npm run up`. `RUN_SEED=true` en ese `.env` carga los
-datos de demostración que usan las pruebas.
+Los entornos oficiales son dos: **desarrollo local** y **producción en Coolify**. La variante autoalojada se
+conserva solo como alternativa documentada.
+
+El entorno de desarrollo: `cp .env.example .env && npm run up`. `RUN_SEED=true` en ese `.env` carga los
+datos de demostración que usan las pruebas. La app móvil de desarrollo (`expo start`, `expo run:*`) usa
+`.env.development` y nunca habla con producción; los builds de release usan `.env.production` y
+`app.config.js` exige HTTPS público. `apps/mobile/.env.local` (no versionado) solo debe contener valores
+personales, como el client ID de Google: lo que pongas ahí pisa a ambos entornos.
+
+Antes de generar cualquier app hay que pasar las pruebas en simulador: ver
+[PRUEBAS-MOVILES.md](PRUEBAS-MOVILES.md).
 
 ## 2. Qué llega a producción (auditoría)
 

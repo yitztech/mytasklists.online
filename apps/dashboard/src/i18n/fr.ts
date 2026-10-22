@@ -145,4 +145,21 @@ export const fr: Catalog<typeof es> = {
     required:
       'Pour sécuriser les données, le panneau d’administration exige la validation en deux étapes. Activez-la pour continuer.',
   },
+  promotionsPage: {
+    title: 'Codes promotionnels',
+    intro: 'Créez des réductions pour les abonnements web et en téléchargement direct. Les offres des boutiques se gèrent dans leurs consoles.',
+    code: 'Code',
+    type: 'Type de réduction',
+    discount: 'Réduction',
+    months: 'Mois avec réduction',
+    uses: 'Utilisations maximales',
+    expiry: 'Expiration (facultatif)',
+    create: 'Créer la promotion',
+    note: 'Ces campagnes s’appliquent aux nouveaux abonnés. Les réductions ne se cumulent pas.',
+    status: 'Statut',
+    action: 'Action',
+    active: 'Active',
+    inactive: 'Inactive',
+    disable: 'Désactiver',
+  },
 };

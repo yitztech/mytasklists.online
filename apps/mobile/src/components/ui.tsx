@@ -68,13 +68,15 @@ export function Field({
   label,
   error,
   testID,
+  ref,
   ...props
-}: TextInputProps & { label: string; error?: string; testID?: string }) {
+}: TextInputProps & { label: string; error?: string; testID?: string; ref?: React.Ref<TextInput> }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={{ marginBottom: spacing.lg }}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
+        ref={ref}
         testID={testID}
         placeholderTextColor={colors.muted}
         style={[

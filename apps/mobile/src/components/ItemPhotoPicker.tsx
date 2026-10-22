@@ -5,15 +5,15 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { colors, spacing } from '../theme';
 
 export function ItemPhotoPicker({ uri, onChange }: { uri: string | null; onChange: (uri: string | null) => void }) {
-  const { i18n } = useTranslation(); const en = i18n.language.startsWith('en');
+  const { t } = useTranslation();
   const pick = async (camera: boolean) => {
     try {
     if (camera) {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) { Alert.alert(en ? 'Camera permission required' : 'Se requiere permiso de cámara'); return; }
+      if (!permission.granted) { Alert.alert(t('photo.cameraPermission')); return; }
     } else {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) { Alert.alert(en ? 'Photo library permission required' : 'Se requiere permiso para acceder a tus fotos'); return; }
+      if (!permission.granted) { Alert.alert(t('photo.libraryPermission')); return; }
     }
     const result = camera
       ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.82, allowsEditing: true, exif: false, cameraType: ImagePicker.CameraType.back })
@@ -28,13 +28,13 @@ export function ItemPhotoPicker({ uri, onChange }: { uri: string | null; onChang
       const image = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.82 });
       onChange(image.uri);
     }
-    } catch { Alert.alert(en ? 'Could not open the photo' : 'No se pudo abrir la foto', en ? 'Try another image.' : 'Inténtalo con otra imagen.'); }
+    } catch { Alert.alert(t('photo.openFailed'), t('photo.tryAnother')); }
   };
   return <View style={{ gap: spacing.sm }}>
     <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-      <Pressable accessibilityRole="button" onPress={() => pick(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.lineStrong, borderRadius: 8 }}><Text style={{ color: colors.brand, fontWeight: '600' }}>{en ? 'Take photo' : 'Tomar foto'}</Text></Pressable>
-      <Pressable accessibilityRole="button" onPress={() => pick(false)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.lineStrong, borderRadius: 8 }}><Text style={{ color: colors.brand, fontWeight: '600' }}>{en ? 'Choose photo' : 'Elegir foto'}</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => pick(true)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.lineStrong, borderRadius: 8 }}><Text style={{ color: colors.brand, fontWeight: '600' }}>{t('photo.take')}</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => pick(false)} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.lineStrong, borderRadius: 8 }}><Text style={{ color: colors.brand, fontWeight: '600' }}>{t('photo.choose')}</Text></Pressable>
     </View>
-    {uri && <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}><Image source={{ uri }} style={{ width: 76, height: 76, borderRadius: 8 }} /><Pressable onPress={() => onChange(null)} accessibilityRole="button"><Text style={{ color: colors.danger, fontWeight: '600' }}>{en ? 'Remove photo' : 'Quitar foto'}</Text></Pressable></View>}
+    {uri && <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}><Image source={{ uri }} style={{ width: 76, height: 76, borderRadius: 8 }} /><Pressable onPress={() => onChange(null)} accessibilityRole="button"><Text style={{ color: colors.danger, fontWeight: '600' }}>{t('photo.remove')}</Text></Pressable></View>}
   </View>;
 }

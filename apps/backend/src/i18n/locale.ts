@@ -1,6 +1,9 @@
 import { DEFAULT_LOCALE, isLocale, normalizeLocale, resolveEnabledLocale, type Locale } from '@lista/contracts/locales';
 export { DEFAULT_LOCALE, isLocale, resolveEnabledLocale } from '@lista/contracts/locales';
 import { ERRORS_EN } from './errors.en';
+import { ERRORS_PT } from './errors.pt';
+import { ERRORS_DE } from './errors.de';
+import { ERRORS_FR } from './errors.fr';
 
 export type { Locale };
 
@@ -23,5 +26,10 @@ export function localeFromHeader(header: string | string[] | undefined): Locale 
 }
 
 /** Mensaje para el cliente en su idioma; el español es el texto original */
-export const translateMessage = (message: string, locale: Locale): string =>
-  resolveEnabledLocale(locale) === 'en' ? (ERRORS_EN[message] ?? message) : message;
+const ERROR_CATALOGS = { en: ERRORS_EN, pt: ERRORS_PT, de: ERRORS_DE, fr: ERRORS_FR } as const;
+
+export const translateMessage = (message: string, locale: Locale): string => {
+  const resolved = resolveEnabledLocale(locale);
+  if (resolved === 'es') return message;
+  return ERROR_CATALOGS[resolved][message] ?? message;
+};

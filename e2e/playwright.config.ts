@@ -5,6 +5,9 @@ const MOBILE_URL = process.env.E2E_MOBILE_URL ?? 'http://localhost:19006';
 
 const isCI = !!process.env.CI;
 
+/** La app móvil solo se prueba en local y a pedido: `npm run test:mobile:web` (E2E_MOBILE=1). */
+const withMobile = process.env.E2E_MOBILE === '1';
+
 /**
  * El video se graba únicamente en local cuando se solicita de manera explícita:
  *   RECORD_VIDEO=true o E2E_RECORD_VIDEO=true
@@ -95,21 +98,25 @@ export default defineConfig({
       },
     },
 
-    // ── App móvil (React Native Web) ─────────────────────────────────
-    {
-      name: 'mobile-app',
-      testDir: './tests/mobile',
-      use: {
-        ...devices['Pixel 7'],
-        baseURL: MOBILE_URL,
-        video: videoSetting({ width: 412, height: 915 }),
-      },
-    },
+    // ── App móvil (React Native Web): solo en local y a pedido ───────
+    ...(withMobile
+      ? [
+          {
+            name: 'mobile-app',
+            testDir: './tests/mobile',
+            use: {
+              ...devices['Pixel 7'],
+              baseURL: MOBILE_URL,
+              video: videoSetting({ width: 412, height: 915 }),
+            },
+          },
+        ]
+      : []),
   ],
 
-  // Servidor estático del bundle web de la app móvil.
+  // Servidor estático del bundle web de la app móvil (solo con E2E_MOBILE=1).
   // El resto de servicios corren en Docker (`docker compose up -d`).
-  webServer: process.env.E2E_SKIP_MOBILE_SERVER
+  webServer: !withMobile || process.env.E2E_SKIP_MOBILE_SERVER
     ? undefined
     : {
         command: 'node utils/mobile-web-server.mjs',

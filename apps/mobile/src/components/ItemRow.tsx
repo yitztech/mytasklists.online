@@ -1,4 +1,3 @@
-import UNITS from '../../../../packages/ui-data/units.json';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +6,7 @@ import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
+import { unitLabel } from '../utils/units';
 
 interface Props {
   item: Item;
@@ -50,7 +50,7 @@ export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit
         </Text>
         <View style={styles.metaRow}>
           <Text style={styles.meta}>
-            {item.quantity} {UNITS.find(u=>u.value===item.unit)?.[i18n.language.startsWith('en')?'en':'es'] || item.unit}
+            {item.quantity} {unitLabel(item.unit, i18n.language)}
           </Text>
           {item.isRecurring && (
             <Badge

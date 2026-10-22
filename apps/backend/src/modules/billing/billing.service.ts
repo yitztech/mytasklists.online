@@ -15,7 +15,13 @@ export class BillingService {
   }
   plans(): BillingPlans {
     return { currency:'USD', price:500, interval:'month', enabled:this.enabled,
-      benefits:{es:process.env.BILLING_BENEFITS_ES||'Suscripción disponible próximamente.',en:process.env.BILLING_BENEFITS_EN||'Subscription coming soon.'},
+      benefits:{
+        es:process.env.BILLING_BENEFITS_ES||'Suscripción disponible próximamente.',
+        en:process.env.BILLING_BENEFITS_EN||'Subscription coming soon.',
+        pt:process.env.BILLING_BENEFITS_PT||'Assinatura disponível em breve.',
+        de:process.env.BILLING_BENEFITS_DE||'Abonnement demnächst verfügbar.',
+        fr:process.env.BILLING_BENEFITS_FR||'Abonnement bientôt disponible.',
+      },
       limits:{freeLists:this.limit('FREE_MAX_LISTS'),freeItems:this.limit('FREE_MAX_ITEMS_PER_LIST'),premiumLists:this.limit('PREMIUM_MAX_LISTS'),premiumItems:this.limit('PREMIUM_MAX_ITEMS_PER_LIST')},
       stores:{ios:process.env.BILLING_COMMERCE_READY==='true'&&process.env.BILLING_APPLE_ENABLED==='true'&&!!process.env.APP_STORE_PRIVATE_KEY&&!!process.env.APPLE_ROOT_CERT_PATHS,android:process.env.BILLING_COMMERCE_READY==='true'&&process.env.BILLING_GOOGLE_ENABLED==='true'&&!!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,iosProduct:process.env.APPLE_SUBSCRIPTION_ID||null,androidProduct:process.env.GOOGLE_SUBSCRIPTION_ID||null,androidBasePlan:process.env.GOOGLE_BASE_PLAN_ID||'monthly'} };
   }

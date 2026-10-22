@@ -12,7 +12,7 @@ test.describe('Frontend web · idiomas', () => {
       await page.goto('/app/login');
       await expect(page.locator('html')).toHaveAttribute('lang', 'en');
       await expect(page.getByTestId('login-card').getByRole('heading')).toHaveText('Sign in');
-      await expect(page.getByTestId('language-en')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByTestId('language-switcher').locator('select')).toHaveValue('en');
 
       // Los errores de la API también llegan en inglés
       await page.getByTestId('login-email').fill(user.email);
@@ -30,7 +30,7 @@ test.describe('Frontend web · idiomas', () => {
     await loginThroughUI(page, user.email, user.password);
     await expect(page.getByTestId('nav-lists')).toHaveText('Mis listas');
 
-    await page.getByTestId('language-en').first().click();
+    await page.getByTestId('language-switcher').first().locator('select').selectOption('en');
     await expect(page.getByTestId('nav-lists')).toHaveText('My lists');
     await expect(page.getByTestId('new-list-button')).toContainText('New list');
 
@@ -43,7 +43,14 @@ test.describe('Frontend web · idiomas', () => {
       .poll(async () => (await (await request.get(`${API_URL}/auth/me`, { headers: auth(user.accessToken) })).json()).locale)
       .toBe('en');
 
-    await page.getByTestId('language-es').first().click();
+    await page.getByTestId('language-switcher').first().locator('select').selectOption('pt');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
+    await expect(page.getByTestId('nav-lists')).toHaveText('Minhas listas');
+    await expect
+      .poll(async () => (await (await request.get(`${API_URL}/auth/me`, { headers: auth(user.accessToken) })).json()).preferredLocale)
+      .toBe('pt');
+
+    await page.getByTestId('language-switcher').first().locator('select').selectOption('es');
     await expect(page.getByTestId('nav-lists')).toHaveText('Mis listas');
   });
 });

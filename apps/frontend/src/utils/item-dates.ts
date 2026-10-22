@@ -1,8 +1,9 @@
 import type { TFunction } from 'i18next';
 import type { Item } from '../types';
+import { LOCALE_CONFIG, normalizeLocale } from '@lista/contracts/locales';
 
 const format = (iso: string, language: string): string =>
-  new Date(iso).toLocaleString(language.startsWith('en') ? 'en' : 'es', {
+  new Date(iso).toLocaleString(LOCALE_CONFIG[normalizeLocale(language) ?? 'es'].intl, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

@@ -145,4 +145,21 @@ export const de: Catalog<typeof es> = {
     required:
       'Um Benutzerdaten zu schützen, verlangt der Admin-Bereich die zweistufige Überprüfung. Bitte aktiviere sie, um fortzufahren.',
   },
+  promotionsPage: {
+    title: 'Aktionscodes',
+    intro: 'Erstelle Rabatte für Web- und Direktdownload-Abonnements. Store-Angebote werden in den jeweiligen Konsolen verwaltet.',
+    code: 'Code',
+    type: 'Rabattart',
+    discount: 'Rabatt',
+    months: 'Rabattierte Monate',
+    uses: 'Maximale Einlösungen',
+    expiry: 'Ablauf (optional)',
+    create: 'Aktion erstellen',
+    note: 'Diese Kampagnen gelten für Neuabonnenten. Rabatte werden nicht kombiniert.',
+    status: 'Status',
+    action: 'Aktion',
+    active: 'Aktiv',
+    inactive: 'Inaktiv',
+    disable: 'Deaktivieren',
+  },
 };

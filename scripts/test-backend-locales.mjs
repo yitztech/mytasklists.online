@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { SUPPORTED_LOCALES, ENABLED_LOCALES, normalizeLocale, resolveEnabledLocale, isLocale } from '@lista/contracts/locales';
+import { SUPPORTED_LOCALES, ENABLED_LOCALES, normalizeLocale, resolveEnabledLocale, resolveLegacyLocale, isLocale } from '@lista/contracts/locales';
 const require = createRequire(import.meta.url);
 const { localeFromHeader, translateMessage } = require('../apps/backend/dist/i18n/locale');
 const templates = require('../apps/backend/dist/modules/mail/mail.templates');
@@ -10,13 +10,16 @@ const { NotificationsService } = require('../apps/backend/dist/modules/notificat
 const { UpdateProfileDto } = require('../apps/backend/dist/modules/users/dto/update-profile.dto');
 const { validate } = require('class-validator');
 
-test('runtime separates supported preferences from enabled catalogs', () => {
+test('runtime publishes five locales and keeps the legacy es/en value', () => {
   assert.deepEqual(SUPPORTED_LOCALES, ['es', 'en', 'pt', 'de', 'fr']);
-  assert.deepEqual(ENABLED_LOCALES, ['es', 'en']);
+  assert.deepEqual(ENABLED_LOCALES, SUPPORTED_LOCALES);
   for (const tag of ['pt-BR', 'de-DE', 'fr-FR']) {
     assert.equal(normalizeLocale(tag), tag.slice(0, 2));
-    assert.equal(resolveEnabledLocale(tag), 'es');
+    assert.equal(resolveEnabledLocale(tag), tag.slice(0, 2));
+    assert.equal(resolveLegacyLocale(tag), 'es');
   }
+  assert.equal(resolveEnabledLocale('zz'), 'es');
+  assert.equal(resolveLegacyLocale('en-US'), 'en');
   assert.equal(normalizeLocale('EN_us'), 'en');
   assert.equal(normalizeLocale('zz'), undefined);
   assert.equal(isLocale('fr-FR'), false);
@@ -35,7 +38,7 @@ test('profile validation accepts five base preferences without allowing arbitrar
   for (const locale of ['zz', 'fr-FR', '']) assert.ok((await validate(Object.assign(new UpdateProfileDto(), { locale }))).length);
 });
 
-test('all transactional templates fall back with truthful lang and preserve HTML escaping', () => {
+test('all transactional templates deliver each locale with truthful lang and HTML escaping', () => {
   const args = {
     verifyEmailTemplate: ['<User>', 'https://example.test/?a=1&b=2', 24],
     listInvitationTemplate: ['<List>', '<Inviter>', 'https://example.test', 24],
@@ -48,15 +51,17 @@ test('all transactional templates fall back with truthful lang and preserve HTML
   };
   assert.deepEqual(Object.keys(templates).sort(), Object.keys(args).sort());
   for (const [name, values] of Object.entries(args)) {
-    for (const locale of ['pt', 'de', 'fr']) {
+    const spanish = templates[name]('es', ...values);
+    for (const locale of ['en', 'pt', 'de', 'fr']) {
       const mail = templates[name](locale, ...values);
-      assert.deepEqual(mail, templates[name]('es', ...values), name);
-      assert.match(mail.html, /<html lang="es">/);
+      assert.notEqual(mail.subject, spanish.subject, `${name}/${locale}`);
+      assert.match(mail.html, new RegExp(`<html lang="${locale}">`));
       assert.doesNotMatch(mail.html, /undefined|<User>|<List>|<Inviter>/);
+      assert.doesNotMatch(mail.text + mail.subject, /undefined/);
     }
-    assert.match(templates[name]('en', ...values).html, /<html lang="en">/);
   }
   assert.equal(translateMessage('Mensaje original', 'fr'), 'Mensaje original');
+  assert.equal(translateMessage('Ocurrió un error inesperado', 'pt'), 'Ocorreu um erro inesperado');
 });
 
 test('notifications group by delivered catalog safely for all saved preferences', async () => {
@@ -71,9 +76,11 @@ test('notifications group by delivered catalog safely for all saved preferences'
   );
   await service.notifyListMembers({ listId: 'list', listName: 'Original user text', type: 'list.shared', render: (texts) => ({ title: texts.listSharedTitle, body: texts.listShared('Actor', 'Original user text') }) });
   assert.equal(rows.length, 5);
-  assert.deepEqual(delivered.map(({ ids }) => ids), [['es', 'pt', 'de', 'fr'], ['en']]);
-  assert.equal(rows.find(({ userId }) => userId === 'fr').title, NOTIFICATION_TEXTS.es.listSharedTitle);
-  assert.equal(rows.find(({ userId }) => userId === 'en').title, NOTIFICATION_TEXTS.en.listSharedTitle);
+  assert.deepEqual(delivered.map(({ ids }) => ids).sort(), SUPPORTED_LOCALES.map((locale) => [locale]).sort());
+  for (const locale of SUPPORTED_LOCALES) {
+    assert.equal(rows.find(({ userId }) => userId === locale).title, NOTIFICATION_TEXTS[locale].listSharedTitle);
+  }
+  assert.notEqual(NOTIFICATION_TEXTS.fr.listSharedTitle, NOTIFICATION_TEXTS.es.listSharedTitle);
 });
 
 test('profile updates retain saved preference while legacy response stays compatible', async () => {
@@ -86,7 +93,7 @@ test('profile updates retain saved preference while legacy response stays compat
     assert.equal(result.locale, locale);
     const view = toPublicUser(result);
     assert.equal(view.preferredLocale, locale);
-    assert.equal(view.locale, resolveEnabledLocale(locale));
+    assert.equal(view.locale, resolveLegacyLocale(locale));
     assert.equal((await service.updateProfile('user', {})).locale, locale);
   }
 });

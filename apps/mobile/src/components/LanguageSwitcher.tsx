@@ -1,60 +1,38 @@
 import { LOCALE_CONFIG } from '@lista/contracts/locales';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { LANGUAGES, setLanguage } from '../i18n';
-import { colors, radius, spacing } from '../theme';
+import { LANGUAGES, currentLanguage, setLanguage } from '../i18n';
+import { colors, radius } from '../theme';
+import { SelectField } from './SelectField';
 
-/** Selector ES / EN. La elección se guarda y gana sobre el idioma del teléfono */
+/** Selector común de idioma. La elección se guarda y se sincroniza con la cuenta. */
 export function LanguageSwitcher() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
-    <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('language.label')} testID="language-switcher">
-      {LANGUAGES.map((language) => {
-        const active = i18n.language === language;
-        return (
-          <Pressable
-            key={language}
-            onPress={() => setLanguage(language)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: active }}
-            accessibilityLabel={LOCALE_CONFIG[language].name}
-            testID={`language-${language}`}
-            style={[styles.option, active && styles.optionActive]}
-          >
-            <Text style={[styles.text, active && styles.textActive]}>{language.toUpperCase()}</Text>
-          </Pressable>
-        );
-      })}
+    <View style={styles.field} testID="language-switcher">
+      <SelectField
+        label={t('language.label')}
+        value={currentLanguage()}
+        onChange={(language) => setLanguage(language as (typeof LANGUAGES)[number])}
+        options={LANGUAGES.map((language) => ({ label: LOCALE_CONFIG[language].name, value: language }))}
+        style={styles.compact}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 2,
-    padding: 3,
-    borderRadius: radius.md,
-    backgroundColor: '#e3e8e4',
-  },
-  option: {
-    minWidth: 44,
-    minHeight: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
+  field: {
+    minWidth: 176,
+    minHeight: 48,
+    overflow: 'hidden',
     borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-  },
-  optionActive: {
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
     backgroundColor: colors.surface,
-    shadowColor: '#15201a',
-    shadowOpacity: 0.16,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
   },
-  text: { fontSize: 13, fontWeight: '700', color: colors.inkSoft, letterSpacing: 0.3 },
-  textActive: { color: colors.ink },
+  // El borde ya lo pone el contenedor
+  compact: { borderWidth: 0, borderRadius: 0 },
 });

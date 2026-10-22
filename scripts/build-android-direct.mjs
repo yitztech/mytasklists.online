@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 // Native release, production HTTPS, persistent private signing key (never in git).
+import {assertMobileVerified} from './lib/mobile-verification.mjs';
+// Ninguna app se genera sin pasar antes las pruebas en simulador con este mismo código
+assertMobileVerified({platform:'android'});
 import {spawn} from 'node:child_process';
 import {readFile,writeFile,mkdir,chmod} from 'node:fs/promises';
 import {randomBytes} from 'node:crypto';

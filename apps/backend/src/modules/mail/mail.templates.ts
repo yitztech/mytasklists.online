@@ -4,6 +4,10 @@
  * mejor soportan los clientes de correo).
  */
 import { resolveEnabledLocale, type EnabledLocale, type Locale } from '@lista/contracts/locales';
+import type { MailCopy } from '../../i18n/mail.types';
+import { MAIL_PT } from '../../i18n/mail.pt';
+import { MAIL_DE } from '../../i18n/mail.de';
+import { MAIL_FR } from '../../i18n/mail.fr';
 
 export interface MailContent {
   subject: string;
@@ -25,7 +29,17 @@ const LAYOUT = {
     fallback: 'If the button does not work, copy this link into your browser:',
     footer: 'If this was not you, ignore this email. MyTaskLists will never ask for your password by email.',
   },
-} satisfies Record<EnabledLocale, unknown>;
+} satisfies Record<'es' | 'en', unknown>;
+
+/** pt/de/fr viven en catálogos de `src/i18n`; es/en conservan sus plantillas originales. */
+const MAIL_CATALOGS: Record<Exclude<EnabledLocale, 'es' | 'en'>, MailCopy> = { pt: MAIL_PT, de: MAIL_DE, fr: MAIL_FR };
+
+const secondaryCopy = (locale: Locale): MailCopy | undefined => {
+  const resolved = resolveEnabledLocale(locale);
+  return resolved in MAIL_CATALOGS ? MAIL_CATALOGS[resolved as keyof typeof MAIL_CATALOGS] : undefined;
+};
+
+const layoutCopy = (locale: Locale) => secondaryCopy(locale) ?? LAYOUT[resolveEnabledLocale(locale) as keyof typeof LAYOUT];
 
 const layout = (
   locale: Locale,
@@ -47,17 +61,30 @@ const layout = (
               ? `<tr><td align="center" style="padding:24px 0">
                    <a href="${escape(action.url)}" style="background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:999px;font-weight:bold;display:inline-block">${escape(action.label)}</a>
                  </td></tr>
-                 <tr><td style="font-size:12px;color:#6b7280;word-break:break-all">${LAYOUT[resolveEnabledLocale(locale)].fallback}<br>${escape(action.url)}</td></tr>`
+                 <tr><td style="font-size:12px;color:#6b7280;word-break:break-all">${layoutCopy(locale).fallback}<br>${escape(action.url)}</td></tr>`
               : ''
           }
-          <tr><td style="font-size:12px;color:#9ca3af;padding-top:24px">${LAYOUT[resolveEnabledLocale(locale)].footer}</td></tr>
+          <tr><td style="font-size:12px;color:#9ca3af;padding-top:24px">${layoutCopy(locale).footer}</td></tr>
         </table>
       </td></tr>
     </table>
   </body>
 </html>`;
 
+const secondaryContent = (locale: Locale, subject: string, title: string, name: string | null, body: string, action?: { label: string; url: string }, extra = ''): MailContent => {
+  const copy = secondaryCopy(locale)!;
+  const greeting = name ? `${copy.hello} ${name},\n\n` : '';
+  const htmlGreeting = name ? `<p>${escape(copy.hello)} ${escape(name)},</p>` : '';
+  return {
+    subject,
+    text: `${greeting}${body}${extra ? `\n\n${extra}` : ''}${action ? `\n\n${action.url}` : ''}`,
+    html: layout(locale, title, `${htmlGreeting}<p>${escape(body)}</p>${extra ? `<p>${escape(extra)}</p>` : ''}`, action),
+  };
+};
+
 export function verifyEmailTemplate(locale: Locale, name: string, url: string, hours: number): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.verify.subject, translated.verify.title, name, translated.verify.body(hours), { label: translated.verify.action, url }, translated.verify.ignore);
   if (locale === 'en') {
     return {
       subject: 'Confirm your email on MyTaskLists',
@@ -87,6 +114,8 @@ export function verifyEmailTemplate(locale: Locale, name: string, url: string, h
 }
 
 export function listInvitationTemplate(locale: Locale, listName: string, inviter: string, url: string, hours: number): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.invite.subject(inviter), translated.invite.title, null, translated.invite.body(inviter, listName, hours), { label: translated.invite.action, url });
   if (locale === 'en') return {
     subject: `${inviter} invited you to a MyTaskLists list`,
     text: `${inviter} invited you to collaborate on “${listName}”. Create your free account using this link (expires in ${hours} hours):\n${url}`,
@@ -100,6 +129,8 @@ export function listInvitationTemplate(locale: Locale, listName: string, inviter
 }
 
 export function resetPasswordTemplate(locale: Locale, name: string, url: string, minutes: number): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.reset.subject, translated.reset.title, name, translated.reset.body(minutes), { label: translated.reset.action, url }, translated.reset.ignore);
   if (locale === 'en') {
     return {
       subject: 'Reset your MyTaskLists password',
@@ -129,6 +160,8 @@ export function resetPasswordTemplate(locale: Locale, name: string, url: string,
 }
 
 export function passwordChangedTemplate(locale: Locale, name: string, loginUrl: string): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.password.subject, translated.password.title, name, translated.password.body, { label: translated.password.action, url: loginUrl }, translated.password.urgent);
   if (locale === 'en') {
     return {
       subject: 'Your MyTaskLists password changed',
@@ -158,6 +191,8 @@ export function passwordChangedTemplate(locale: Locale, name: string, loginUrl: 
 }
 
 export function mfaChangedTemplate(locale: Locale, name: string, enabled: boolean): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.mfa.subject(enabled), translated.mfa.title(enabled), name, translated.mfa.body(enabled));
   if (locale === 'en') {
     const state = enabled ? 'turned on' : 'turned off';
     return {
@@ -183,6 +218,8 @@ export function mfaChangedTemplate(locale: Locale, name: string, enabled: boolea
 }
 
 export function socialLinkedTemplate(locale: Locale, name: string, provider: string, resetUrl: string): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.social.subject(provider), translated.social.subject(provider), name, translated.social.body(provider), { label: translated.social.action, url: resetUrl });
   if (locale === 'en') {
     return {
       subject: `We linked your ${provider} account`,
@@ -214,6 +251,8 @@ export function socialLinkedTemplate(locale: Locale, name: string, provider: str
 }
 
 export function accountDeletedTemplate(locale: Locale, name: string): MailContent {
+  const translated = secondaryCopy(locale);
+  if (translated) return secondaryContent(locale, translated.deleted.subject, translated.deleted.title, name, translated.deleted.body);
   if (locale === 'en') {
     return {
       subject: 'Your MyTaskLists account was deleted',
@@ -241,7 +280,8 @@ export function accountDeletedTemplate(locale: Locale, name: string): MailConten
 }
 
 export function registrationTemplate(locale: Locale, url: string, minutes: number): MailContent {
-  const title = locale === 'en' ? 'Complete your registration' : 'Completa tu registro';
-  const text = locale === 'en' ? `Verify your email to create your account. This link expires in ${minutes} minutes.` : `Valida tu correo para crear tu cuenta. Este enlace vence en ${minutes} minutos.`;
-  return { subject: title + ' · MyTaskLists', text: `${text}\n\n${url}`, html: layout(locale, title, `<p>${text}</p>`, { label: title, url }) };
+  const translated = secondaryCopy(locale)?.registration;
+  const title = translated?.title ?? (locale === 'en' ? 'Complete your registration' : 'Completa tu registro');
+  const text = translated?.body(minutes) ?? (locale === 'en' ? `Verify your email to create your account. This link expires in ${minutes} minutes.` : `Valida tu correo para crear tu cuenta. Este enlace vence en ${minutes} minutos.`);
+  return { subject: title + ' · MyTaskLists', text: `${text}\n\n${url}`, html: layout(locale, title, `<p>${escape(text)}</p>`, { label: title, url }) };
 }

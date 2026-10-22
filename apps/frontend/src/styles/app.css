@@ -1194,33 +1194,35 @@ html {
   margin-bottom: 1rem;
 }
 
-/* Selector ES / EN */
+/* Selector de idioma */
 .lc-lang {
   display: inline-flex;
-  padding: 0.2rem;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--lc-line-strong);
   border-radius: var(--lc-radius);
-  background: #e3e8e4;
-}
-.lc-lang button {
-  min-width: 2.5rem;
-  min-height: 2rem;
-  padding: 0 0.6rem;
-  border: 0;
-  border-radius: 0.45rem;
-  background: transparent;
-  color: var(--lc-ink-2);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  transition: background-color 0.16s var(--lc-ease), color 0.16s var(--lc-ease);
-}
-.lc-lang button:hover {
-  color: var(--lc-ink);
-}
-.lc-lang button[aria-pressed='true'] {
   background: var(--lc-surface);
+  color: var(--lc-ink-2);
+}
+.lc-lang select {
+  min-width: 7.5rem;
+  min-height: 2.5rem;
+  padding: 0 1.6rem 0 0;
+  border: 0;
+  background: transparent;
   color: var(--lc-ink);
-  box-shadow: 0 1px 2px rgb(21 32 26 / 0.16);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lc-lang:focus-within {
+  border-color: var(--lc-pine);
+  box-shadow: 0 0 0 0.2rem rgb(29 91 69 / 0.16);
+}
+.lc-lang select:focus {
+  outline: 0;
 }
 
 /* ── 14. Movimiento ────────────────────────────────────────────────────── */

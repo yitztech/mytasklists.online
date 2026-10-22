@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { itemsApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { prepareItemImage } from '../utils/item-image';
+import { localizedUnits } from '../utils/units';
 
 interface Props {
   listId: string;
@@ -19,7 +20,6 @@ const PRESET_DAYS = [3, 7, 14, 21, 30];
  */
 export function AddItemForm({ listId, disabled, onError }: Props) {
   const { t, i18n } = useTranslation();
-  const en = i18n.language.startsWith("en");
   const [customUnit,setCustomUnit] = useState('');
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -43,7 +43,7 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
     const amount = Number(quantity.replace(',', '.'));
     const selectedUnit = unit === 'custom' ? customUnit.trim() : unit;
     if (!Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount*100)-amount*100)>1e-7 || !selectedUnit || selectedUnit.length>20) {
-      onError(en?'Enter a valid quantity (up to 2 decimals) and unit.':'Escribe una cantidad válida (hasta 2 decimales) y una unidad.');return;
+      onError(t('addItem.invalidQuantity'));return;
     }
     setSaving(true);
     try {
@@ -65,7 +65,7 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
           body.append('file', await prepareItemImage(selectedImage));
           await itemsApi.uploadImage(created.id, body);
         } catch (error) {
-          onError(en ? 'Item added, but its image could not be uploaded.' : 'El elemento se agregó, pero no se pudo subir su imagen.');
+          onError(t('addItem.imageUploadFailed'));
         }
       }
     } catch (error) {
@@ -140,10 +140,10 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
                 {t('addItem.unit')}
               </label>
               <select id="item-unit" className="form-select" value={unit} onChange={e=>setUnit(e.target.value)} data-testid="item-unit-input">
-                {UNITS.map(u=><option key={u.value} value={u.value}>{en?u.en:u.es}</option>)}
-                <option value="custom">{en?'Custom…':'Personalizado…'}</option>
+                {localizedUnits(i18n.language).map(u=><option key={u.value} value={u.value}>{u.label}</option>)}
+                <option value="custom">{t('addItem.customUnit')}</option>
               </select>
-              {unit==='custom' && <><label className="form-label mt-2" htmlFor="custom-unit">{en?'Unit name':'Nombre de la unidad'}</label>
+              {unit==='custom' && <><label className="form-label mt-2" htmlFor="custom-unit">{t('addItem.unitName')}</label>
                 <input id="custom-unit" className="form-control" required maxLength={20} value={customUnit} onChange={e=>setCustomUnit(e.target.value)} autoFocus data-testid="item-custom-unit"/></>}
 
             </div>
@@ -200,7 +200,7 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
               </div>
             )}
             <div className="col-12">
-              <label className="form-label" htmlFor="item-image">{en ? 'Photo (optional)' : 'Imagen (opcional)'}</label>
+              <label className="form-label" htmlFor="item-image">{t('addItem.photoOptional')}</label>
               <input ref={fileRef} id="item-image" className="form-control" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
             </div>
           </div>

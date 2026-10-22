@@ -80,11 +80,16 @@ export function checkContract(base = 'origin/main') {
       const previous=fs.existsSync(path.join(oldDir,'behavior.json'))?JSON.parse(fs.readFileSync(path.join(oldDir,'behavior.json'),'utf8')):{};
       if(next.registrationFlow !== previous.registrationFlow) breaking.push({name:'registrationFlow',reason:'el registro directo exige actualizar clientes al flujo de correo previo'});
     }
-    if (fs.existsSync(path.join(oldDir, 'locales.d.ts'))) {
-      fs.appendFileSync(path.join(oldDir, 'index.d.ts'), "\nexport type { EnabledLocale } from './locales';\n");
-    }
-    if (fs.existsSync(path.join(newDir, 'locales.d.ts'))) {
-      fs.appendFileSync(path.join(newDir, 'index.d.ts'), "\nexport type { EnabledLocale } from './locales';\n");
+    // `User.locale` es el idioma que entienden las apps publicadas: antes era
+    // EnabledLocale y ahora LegacyLocale. Ampliar los idiomas habilitados no lo rompe.
+    const legacyLocale = (dir) => {
+      const declarations = fs.readFileSync(path.join(dir, 'locales.d.ts'), 'utf8');
+      return /\bLegacyLocale\b/.test(declarations) ? 'LegacyLocale' : 'EnabledLocale';
+    };
+    for (const dir of [oldDir, newDir]) {
+      if (fs.existsSync(path.join(dir, 'locales.d.ts'))) {
+        fs.appendFileSync(path.join(dir, 'index.d.ts'), `\nexport type { ${legacyLocale(dir)} as PublishedLocale } from './locales';\n`);
+      }
     }
     const lines = [
       "import type * as Old from './old/index';",
@@ -95,6 +100,8 @@ export function checkContract(base = 'origin/main') {
     const lineOwner = new Map();
 
     for (const [name, arity] of oldTypes) {
+      // Se compara como PublishedLocale (abajo): es la forma que viaja en `User.locale`.
+      if (name === 'EnabledLocale') continue;
       if (!newTypes.has(name)) {
         breaking.push({ name, reason: 'se eliminó del contrato' });
         continue;
@@ -103,6 +110,10 @@ export function checkContract(base = 'origin/main') {
       const [from, to] = travelsToServer(name) ? ['Old', 'New'] : ['New', 'Old'];
       lineOwner.set(lines.length + 1, name);
       lines.push(`export type Check_${name} = Expect<Fits<${from}.${name}${args}, ${to}.${name}${args}>>;`);
+    }
+    if (fs.existsSync(path.join(oldDir, 'locales.d.ts'))) {
+      lineOwner.set(lines.length + 1, 'PublishedLocale');
+      lines.push('export type Check_PublishedLocale = Expect<Fits<New.PublishedLocale, Old.PublishedLocale>>;');
     }
     const checkFile = path.join(work, 'check.ts');
     fs.writeFileSync(checkFile, `${lines.join('\n')}\n`);

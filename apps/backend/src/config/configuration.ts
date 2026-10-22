@@ -210,7 +210,8 @@ export default (): AppConfig => {
       globalTtlMs: int(process.env.RATE_LIMIT_GLOBAL_TTL_MS, 60_000),
       authLimit: rl('RATE_LIMIT_AUTH', 10, 1000),
       authTtlMs: int(process.env.RATE_LIMIT_AUTH_TTL_MS, 60_000),
-      sensitiveLimit: rl('RATE_LIMIT_SENSITIVE', 5, 1000),
+      // En desarrollo la suite e2e crea cientos de cuentas por corrida
+      sensitiveLimit: rl('RATE_LIMIT_SENSITIVE', 5, 20000),
       sensitiveTtlMs: int(process.env.RATE_LIMIT_SENSITIVE_TTL_MS, 15 * 60_000),
       loginMaxFailures: int(process.env.LOGIN_MAX_FAILURES, 10),
       loginLockMs: int(process.env.LOGIN_LOCK_MS, 15 * 60_000),

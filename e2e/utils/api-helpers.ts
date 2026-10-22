@@ -1,4 +1,4 @@
-import { waitForEmail, tokenFromEmail } from './mailpit';
+import { receivedEmailIds, waitForEmail, tokenFromEmail } from './mailpit';
 import type { APIRequestContext } from '@playwright/test';
 
 export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8080';
@@ -14,9 +14,10 @@ export const SEED = {
 export const DEFAULT_PASSWORD = 'Prueba12345';
 
 let counter = 0;
+// Cada worker es un proceso: el pid evita que dos coincidan en el mismo milisegundo
 export const uniqueEmail = (prefix = 'e2e'): string => {
   counter += 1;
-  return `${prefix}.${Date.now().toString(36)}${counter}@example.com`;
+  return `${prefix}.${Date.now().toString(36)}${process.pid.toString(36)}${counter}@example.com`;
 };
 
 export const uniqueWhatsapp = (): string =>
@@ -46,13 +47,15 @@ export async function registerUser(
     password: overrides.password ?? DEFAULT_PASSWORD,
   };
 
+  // Si la dirección ya se usó (p. ej. tras borrar la cuenta), su correo anterior trae un token gastado
+  const previous = overrides.email ? await receivedEmailIds(request, payload.email) : new Set<string>();
   let initiate = await request.post(`${API_URL}/auth/registration/request`, { data: { email: payload.email } });
   if (initiate.status() === 429) {
     await new Promise((r) => setTimeout(r, 1200));
     initiate = await request.post(`${API_URL}/auth/registration/request`, { data: { email: payload.email } });
   }
-  if (!initiate.ok()) throw new Error(`No se pudo solicitar registro: ${initiate.status()}`);
-  const mail = await waitForEmail(request, payload.email, 'Completa tu registro');
+  if (!initiate.ok()) throw new Error(`No se pudo solicitar registro: ${initiate.status()} ${await initiate.text()}`);
+  const mail = await waitForEmail(request, payload.email, 'Completa tu registro', undefined, previous);
   const token = tokenFromEmail(mail, '/app/register/complete');
   const response = await request.post(`${API_URL}/auth/registration/complete`, { data: {token,fullName:payload.fullName,whatsapp:payload.whatsapp,password:payload.password,passwordConfirmation:payload.password} });
   if (!response.ok()) {

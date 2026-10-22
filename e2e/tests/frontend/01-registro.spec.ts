@@ -1,4 +1,5 @@
 import { requestRegistration } from '../../utils/registration';
+import { resetRegistrationRequests } from '../../utils/stack';
 import { waitForEmail,linkFromEmail } from '../../utils/mailpit';
 import { expect, test } from '@playwright/test';
 import { DEFAULT_PASSWORD, uniqueEmail, uniqueWhatsapp } from '../../utils/api-helpers';
@@ -45,6 +46,7 @@ test.describe('Frontend web · registro de usuarios', () => {
   });
 
   test('CP-WEB-003 · la pantalla no revela qué correos ya tienen cuenta',async({page})=>{
+    resetRegistrationRequests('carlos@example.com');
     await page.goto('/app/register');await page.getByTestId('register-email').fill('carlos@example.com');await page.getByTestId('register-submit').click();
     await expect(page.getByTestId('registration-sent')).toContainText('Si puedes registrarte');
     await expect(page.getByTestId('register-fullname')).toHaveCount(0);

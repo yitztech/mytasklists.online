@@ -1,4 +1,12 @@
 const base = require('./app.json').expo;
+const { withPodfile } = require('expo/config-plugins');
+// GoogleSignIn 10 trae AppCheckCore, que necesita modular headers en sus dependencias. El plugin
+// del SDK los añade, pero solo se carga con un client ID de iOS; sin él, `pod install` falla.
+const GOOGLE_PODS = ['AppCheckCore', 'GoogleUtilities', 'RecaptchaInterop'].map(name => `  pod '${name}', :modular_headers => true`).join('\n');
+const withGoogleModularHeaders = config => withPodfile(config, config => {
+  if (!config.modResults.contents.includes("pod 'AppCheckCore'")) config.modResults.contents = config.modResults.contents.replace(/^(\s*config = use_native_modules)/m, `${GOOGLE_PODS}\n$1`);
+  return config;
+});
 module.exports = () => {
   const release = ['production', 'direct'].includes(process.env.EAS_BUILD_PROFILE) || process.env.MYTASKLISTS_LOCAL_RELEASE === 'true';
   const apiUrl = process.env.EXPO_PUBLIC_API_URL || (release ? 'https://mytasklists.online/api' : base.extra.apiUrl);
@@ -14,6 +22,8 @@ module.exports = () => {
     googlePlugins.push(['react-native-nitro-google-signin', {
       iosUrlScheme: googleIosClientId.split('.').reverse().join('.'),
     }]);
+  } else {
+    googlePlugins.push(withGoogleModularHeaders);
   }
   return {...base, plugins:[...(base.plugins||[]),'expo-iap',...googlePlugins], ...(process.env.MYTASKLISTS_LOCAL_RELEASE==='true'?{updates:{enabled:false}}:{}), extra:{...base.extra,apiUrl,socketUrl,googleWebClientId,googleIosClientId,billingChannel:process.env.EXPO_PUBLIC_BILLING_CHANNEL||(process.env.EAS_BUILD_PLATFORM==='ios'?'app_store':'play')}};
 };

@@ -2,6 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { assertMobileVerified } from './lib/mobile-verification.mjs';
 
 const [versionArg, rootArg] = process.argv.slice(2);
 const root = resolve(rootArg || 'downloads');
@@ -31,6 +32,12 @@ try {
   apkStat = await stat(apkPath);
 } catch {
   throw new Error(`El archivo APK ${apkPath} no existe. Ejecuta primero la compilación.`);
+}
+
+// Solo se publica la versión que pasó las pruebas en simulador
+const verification = assertMobileVerified({ platform: 'android' });
+if (verification.version !== version) {
+  throw new Error(`Se verificó la ${verification.version} en simulador, no la ${version}. Ejecuta npm run mobile:test.`);
 }
 
 const tag = `v${version}`;

@@ -67,6 +67,15 @@ export const fr: Catalog<typeof es> = {
       password: '8 caractères minimum',
     },
   },
+  registrationRequest: {
+    unavailable: 'L’inscription par e-mail n’est pas encore disponible sur ce serveur. Réessayez plus tard.',
+    title: 'Créez votre compte',
+    intro: 'Confirmez d’abord votre adresse e-mail. Complétez vos informations via le lien dans votre navigateur, puis connectez-vous ici.',
+    sent: 'Si vous pouvez vous inscrire avec cette adresse, vous recevrez un lien. Vous avez déjà un compte ? Connectez-vous ou réinitialisez votre mot de passe.',
+    resendIn: 'Renvoyer dans {{seconds}}s',
+    send: 'Envoyer le lien',
+    signIn: 'Se connecter',
+  },
   forgot: {
     title: 'Récupérez votre compte',
     subtitle: 'Nous vous enverrons un lien pour choisir un nouveau mot de passe.',
@@ -101,6 +110,10 @@ export const fr: Catalog<typeof es> = {
     share: 'Partager',
     shareEmail: 'email@exemple.fr',
     shareSubmit: 'Partager la liste',
+    quantity: 'Quantité', unit: 'Unité', customUnit: 'Personnalisée…', unitName: 'Nom de l’unité', photoOptional: 'Photo (facultative)',
+    invitationSent: 'Invitation envoyée', invitationSentBody: 'Un lien d’inscription a été envoyé à {{email}}.',
+    pendingInvitations: 'Invitations en attente', noPendingInvitations: 'Aucune invitation en attente.', expires: 'Expire le', cancelInvitation: 'Annuler l’invitation',
+    invalidQuantity: 'Saisissez une quantité et une unité valides.', itemAdded: 'Article ajouté', photoUploadFailed: 'La photo n’a pas pu être envoyée.',
     notify: 'M’avertir des modifications',
     pendingHeading: 'À acheter ({{count}})',
     purchasedHeading: 'Achetés ({{count}})',
@@ -127,6 +140,15 @@ export const fr: Catalog<typeof es> = {
     restore: 'Remettre {{name}} dans les articles à acheter',
     returnsIn: 'revient dans {{count}} j',
     close: 'Retirer {{name}} de la liste',
+  },
+  editItem: {
+    invalid: 'Vérifiez les informations de l’article', saveFailed: 'Impossible d’enregistrer l’article', title: 'Modifier l’article', name: 'Nom', note: 'Note',
+    quantity: 'Quantité', unit: 'Unité', custom: 'Personnalisée…', unitName: 'Nom de l’unité', repeat: 'Répéter automatiquement',
+    repeatEvery: 'Répéter tous les (jours)', image: 'Photo de l’article', save: 'Enregistrer', saving: 'Enregistrement…',
+  },
+  photo: {
+    cameraPermission: 'Autorisation d’utiliser l’appareil photo requise', libraryPermission: 'Autorisation d’accéder à vos photos requise',
+    openFailed: 'Impossible d’ouvrir la photo', tryAnother: 'Essayez une autre image.', take: 'Prendre une photo', choose: 'Choisir une photo', remove: 'Supprimer la photo',
   },
   settings: {
     noWhatsapp: 'Aucun numéro WhatsApp enregistré',
@@ -156,6 +178,9 @@ export const fr: Catalog<typeof es> = {
     language: 'Langue',
     languageHint: 'Utilisée également pour les e-mails et alertes qui vous sont envoyés.',
     logout: 'Déconnexion',
+  },
+  billing: {
+    missingToken:'Jeton d’achat manquant',noProduct:'Aucun produit n’est disponible dans la boutique.',offerUnavailable:'Cette offre n’est pas disponible pour votre compte de boutique.',codeUnavailable:'Ce code n’est pas disponible pour votre compte de boutique.',title:'Mon forfait',free:'Gratuit',manage:'Gérer ou annuler',month:'mois',promo:'Code promotionnel',redeemStore:'Utiliser un code d’offre de la boutique',apply:'Appliquer le code',months:'{{count}} mois',billingPeriod:'période de facturation',renewals:'{{count}} renouvellements',review:'Vérifiez le montant final et le renouvellement mensuel sur l’écran de paiement. Annulez depuis Mon forfait ou la boutique.',continue:'Continuer vers le paiement',comingSoon:'Les abonnements payants seront bientôt disponibles. Continuez gratuitement.',restore:'Restaurer les achats',
   },
   push: {
     channel: 'Listes partagées',
@@ -190,5 +215,6 @@ export const fr: Catalog<typeof es> = {
     needed: ' et la version {{version}} ou ultérieure est requise.',
     store: 'Aller sur le store',
     searchStore: 'Recherchez MyTaskLists dans la boutique d’applications de votre téléphone.',
+    downloads: 'Voir les téléchargements', useWeb: 'Utiliser l’application web',
   },
 };

@@ -73,8 +73,9 @@ test('plural categories follow locale rules; missing French many is reported', (
   assert.deepEqual(compareCatalog(source, target, 'en', 'test').missing, []);
 });
 
-test('locale with legacy uncatalogued templates cannot pass release gate', () => {
-  const errors = check(ROOT, { release: 'fr' }).errors;
-  assert.ok(!errors.some(error => /Missing translation/.test(error)));
-  assert.ok(errors.some(error => /legacy landing\/backend/.test(error)));
+test('an enabled locale without server delivery catalogs fails the release gate', t => {
+  assert.ok(!check(ROOT, { release: 'fr' }).errors.length);
+  const dir = fixture(t);
+  fs.rmSync(path.join(dir, 'apps/backend/src/i18n/mail.fr.ts'));
+  assert.ok(check(dir).errors.some(error => /Release fr: missing delivery catalog .*mail\.fr\.ts/.test(error)));
 });

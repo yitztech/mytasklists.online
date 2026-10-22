@@ -49,6 +49,10 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
       - run: npm run typecheck --prefix apps/mobile
+      # Ninguna app (build ni OTA) sale sin pasar antes las pruebas en simulador
+      # con este mismo código: `npm run mobile:test` y commit de verificacion.json
+      - name: Verificada en simulador local
+        run: node scripts/mobile-gate.mjs
 
       - name: OTA o tienda
         id: plan

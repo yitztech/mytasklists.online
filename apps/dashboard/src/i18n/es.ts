@@ -146,4 +146,21 @@ export const es = {
     required:
       'Para proteger los datos de las personas, el panel exige la verificación en dos pasos. Actívala para continuar.',
   },
+  promotionsPage: {
+    title: 'Códigos promocionales',
+    intro: 'Crea descuentos para suscripciones web y de descarga directa. Las ofertas de tiendas se administran en sus consolas.',
+    code: 'Código',
+    type: 'Tipo de descuento',
+    discount: 'Descuento',
+    months: 'Meses con descuento',
+    uses: 'Máximo de usos',
+    expiry: 'Vencimiento (opcional)',
+    create: 'Crear promoción',
+    note: 'Estas campañas aplican a nuevos suscriptores. No se acumulan descuentos.',
+    status: 'Estado',
+    action: 'Acción',
+    active: 'Activo',
+    inactive: 'Inactivo',
+    disable: 'Desactivar',
+  },
 } as const;

@@ -1,21 +1,16 @@
 appId: online.mytasklists.app
 name: Acceso · credenciales inválidas e inicio de sesión
-env:
-  API_URL: http://localhost:8080/api
 ---
-- runScript: ../scripts/crear-cuenta.js
 - runFlow: ../subflows/abrir-sin-sesion.yaml
 
 # Con la contraseña equivocada se queda en el login y lo explica
 - tapOn:
     id: login-email
-- inputText: ${output.cuenta.email}
-- tapOn:
-    id: login-password
+- inputText: ${EMAIL}
+# Intro pasa a la contraseña y después envía: el teclado tapa esos campos en pantallas pequeñas
+- pressKey: Enter
 - inputText: ClaveEquivocada99
-- hideKeyboard
-- tapOn:
-    id: login-submit
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: login-error
