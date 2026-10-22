@@ -67,6 +67,15 @@ export const pt: Catalog<typeof es> = {
       password: 'Mínimo de 8 caracteres',
     },
   },
+  registrationRequest: {
+    unavailable: 'O cadastro por e-mail ainda não está disponível neste servidor. Tente novamente mais tarde.',
+    title: 'Crie sua conta',
+    intro: 'Primeiro, confirme seu e-mail. Preencha seus dados pelo link no navegador e depois entre aqui.',
+    sent: 'Se você puder se cadastrar com este e-mail, receberá um link. Já tem uma conta? Entre ou redefina sua senha.',
+    resendIn: 'Reenviar em {{seconds}}s',
+    send: 'Enviar link',
+    signIn: 'Entrar',
+  },
   forgot: {
     title: 'Recupere sua conta',
     subtitle: 'Enviaremos um link para você escolher uma nova senha.',
@@ -101,6 +110,10 @@ export const pt: Catalog<typeof es> = {
     share: 'Compartilhar',
     shareEmail: 'email@exemplo.com',
     shareSubmit: 'Compartilhar lista',
+    quantity: 'Quantidade', unit: 'Unidade', customUnit: 'Personalizada…', unitName: 'Nome da unidade', photoOptional: 'Foto (opcional)',
+    invitationSent: 'Convite enviado', invitationSentBody: 'Enviamos um link de cadastro para {{email}}.',
+    pendingInvitations: 'Convites pendentes', noPendingInvitations: 'Não há convites pendentes.', expires: 'Expira em', cancelInvitation: 'Cancelar convite',
+    invalidQuantity: 'Digite uma quantidade e unidade válidas.', itemAdded: 'Item adicionado', photoUploadFailed: 'Não foi possível enviar a foto.',
     notify: 'Avisar-me sobre alterações',
     pendingHeading: 'A comprar ({{count}})',
     purchasedHeading: 'Comprados ({{count}})',
@@ -127,6 +140,15 @@ export const pt: Catalog<typeof es> = {
     restore: 'Mover {{name}} de volta para a comprar',
     returnsIn: 'volta em {{count}} d',
     close: 'Remover {{name}} da lista',
+  },
+  editItem: {
+    invalid: 'Revise os dados do item', saveFailed: 'Não foi possível salvar o item', title: 'Editar item', name: 'Nome', note: 'Observação',
+    quantity: 'Quantidade', unit: 'Unidade', custom: 'Personalizada…', unitName: 'Nome da unidade', repeat: 'Repetir automaticamente',
+    repeatEvery: 'Repetir a cada (dias)', image: 'Foto do item', save: 'Salvar', saving: 'Salvando…',
+  },
+  photo: {
+    cameraPermission: 'É necessário permitir o acesso à câmera', libraryPermission: 'É necessário permitir o acesso às suas fotos',
+    openFailed: 'Não foi possível abrir a foto', tryAnother: 'Tente outra imagem.', take: 'Tirar foto', choose: 'Escolher foto', remove: 'Remover foto',
   },
   settings: {
     noWhatsapp: 'Sem WhatsApp cadastrado',
@@ -156,6 +178,9 @@ export const pt: Catalog<typeof es> = {
     language: 'Idioma',
     languageHint: 'Também é usado nos e-mails e avisos enviados para você.',
     logout: 'Sair',
+  },
+  billing: {
+    missingToken:'Token da compra ausente',noProduct:'Nenhum produto está disponível na loja.',offerUnavailable:'Esta oferta não está disponível para sua conta da loja.',codeUnavailable:'Este código não está disponível para sua conta da loja.',title:'Meu plano',free:'Grátis',manage:'Gerenciar ou cancelar',month:'mês',promo:'Código promocional',redeemStore:'Resgatar código de oferta da loja',apply:'Aplicar código',months:'{{count}} meses',billingPeriod:'período de cobrança',renewals:'{{count}} renovações',review:'Revise o valor final e a renovação mensal na tela de pagamento. Cancele em Meu plano ou na loja.',continue:'Continuar para o pagamento',comingSoon:'As assinaturas pagas estarão disponíveis em breve. Continue grátis.',restore:'Restaurar compras',
   },
   push: {
     channel: 'Listas compartilhadas',
@@ -190,5 +215,6 @@ export const pt: Catalog<typeof es> = {
     needed: ' e a versão {{version}} ou posterior é necessária.',
     store: 'Ir para a loja',
     searchStore: 'Procure por MyTaskLists na loja do seu telefone.',
+    downloads: 'Ver downloads', useWeb: 'Usar aplicativo web',
   },
 };

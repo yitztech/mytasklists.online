@@ -68,6 +68,15 @@ export const es = {
       password: 'Mínimo 8 caracteres',
     },
   },
+  registrationRequest: {
+    unavailable: 'El registro por correo todavía no está disponible en este servidor. Inténtalo más tarde.',
+    title: 'Crea tu cuenta',
+    intro: 'Primero valida tu correo. Completa tus datos con el enlace en tu navegador y después ingresa aquí.',
+    sent: 'Si puedes registrarte con este correo, recibirás un enlace. ¿Ya tienes cuenta? Ingresa o recupera tu contraseña.',
+    resendIn: 'Reenviar en {{seconds}}s',
+    send: 'Enviar enlace',
+    signIn: 'Ingresar',
+  },
   forgot: {
     title: 'Recupera tu cuenta',
     subtitle: 'Te enviaremos un enlace para elegir una contraseña nueva.',
@@ -102,6 +111,10 @@ export const es = {
     share: 'Compartir',
     shareEmail: 'correo@ejemplo.com',
     shareSubmit: 'Compartir lista',
+    quantity: 'Cantidad', unit: 'Unidad', customUnit: 'Personalizado…', unitName: 'Nombre de la unidad', photoOptional: 'Foto (opcional)',
+    invitationSent: 'Invitación enviada', invitationSentBody: 'Enviamos un enlace de registro a {{email}}.',
+    pendingInvitations: 'Invitaciones pendientes', noPendingInvitations: 'No hay invitaciones pendientes.', expires: 'Expira', cancelInvitation: 'Cancelar invitación',
+    invalidQuantity: 'Escribe una cantidad y unidad válidas.', itemAdded: 'Elemento agregado', photoUploadFailed: 'No se pudo subir la foto.',
     notify: 'Avisarme de los cambios',
     pendingHeading: 'Por comprar ({{count}})',
     purchasedHeading: 'Comprados ({{count}})',
@@ -128,6 +141,15 @@ export const es = {
     restore: 'Regresar {{name}} a pendientes',
     returnsIn: 'vuelve en {{count}} d',
     close: 'Quitar {{name}} de la lista',
+  },
+  editItem: {
+    invalid: 'Revisa los datos del elemento', saveFailed: 'No se pudo guardar el elemento', title: 'Editar elemento', name: 'Nombre', note: 'Nota',
+    quantity: 'Cantidad', unit: 'Unidad', custom: 'Personalizado…', unitName: 'Nombre de unidad', repeat: 'Repetir automáticamente',
+    repeatEvery: 'Repetir cada (días)', image: 'Foto del elemento', save: 'Guardar', saving: 'Guardando…',
+  },
+  photo: {
+    cameraPermission: 'Se requiere permiso de cámara', libraryPermission: 'Se requiere permiso para acceder a tus fotos',
+    openFailed: 'No se pudo abrir la foto', tryAnother: 'Inténtalo con otra imagen.', take: 'Tomar foto', choose: 'Elegir foto', remove: 'Quitar foto',
   },
   settings: {
     noWhatsapp: 'Sin WhatsApp registrado',
@@ -157,6 +179,9 @@ export const es = {
     language: 'Idioma',
     languageHint: 'También se usa en los correos y avisos que te enviamos.',
     logout: 'Cerrar sesión',
+  },
+  billing: {
+    missingToken:'Falta el token de compra',noProduct:'No hay un producto disponible en la tienda.',offerUnavailable:'Esta oferta no está disponible para tu cuenta de tienda.',codeUnavailable:'Este código no está disponible para tu cuenta de tienda.',title:'Mi plan',free:'Gratis',manage:'Administrar o cancelar',month:'mes',promo:'Código promocional',redeemStore:'Canjear código de oferta en la tienda',apply:'Aplicar código',months:'{{count}} meses',billingPeriod:'período de facturación',renewals:'{{count}} renovaciones',review:'Revisa el importe final y la renovación mensual en la pantalla de pago. Cancela desde Mi plan o la tienda.',continue:'Continuar al pago',comingSoon:'Las suscripciones de pago estarán disponibles próximamente. Continúa gratis.',restore:'Restaurar compras',
   },
   push: {
     channel: 'Listas compartidas',
@@ -191,5 +216,6 @@ export const es = {
     needed: ' y se necesita la {{version}} o posterior.',
     store: 'Ir a la tienda',
     searchStore: 'Busca MyTaskLists en la tienda de tu teléfono.',
+    downloads: 'Ver descargas', useWeb: 'Usar app web',
   },
 } as const;

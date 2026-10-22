@@ -19,8 +19,7 @@ interface FieldErrors {
 export function RegisterPage() {
   const { register, user, loading } = useAuth();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const en = i18n.language.startsWith('en');
+  const { t } = useTranslation();
   const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
   // Leído antes de limpiar el fragmento: el alta se pidió desde la app nativa
   const [nativeApp] = useState(rememberNativeApp);
@@ -34,11 +33,11 @@ export function RegisterPage() {
 
   useEffect(() => {
     window.history.replaceState(null, '', window.location.pathname);
-    if (!token) {setError(en?'Reopen the link from your email.':'Vuelve a abrir el enlace de tu correo.');return;}
+    if (!token) {setError(t('register.reopenLink'));return;}
     let active=true;
     authApi.validateRegistration(token).then(r=>{if(active){setForm(f=>({...f,email:r.email}));setValidated(true);}}).catch(e=>{if(active)setError(e.message);});
     return ()=>{active=false;};
-  },[token,en]);
+  },[token,t]);
 
   if (registered && nativeApp)
     return <ReturnToApp app={nativeApp} email={form.email} message={t('returnToApp.registered')} />;
@@ -58,7 +57,7 @@ export function RegisterPage() {
     if (!/^\+?[0-9]{8,20}$/.test(form.whatsapp.trim()))
       errors.whatsapp = t('register.errors.whatsapp');
     if (form.password.length < 8 || new TextEncoder().encode(form.password).length > 72) errors.password = t('common.passwordTooShort');
-    if (form.password !== form.passwordConfirmation) errors.passwordConfirmation = en ? "Passwords do not match" : "Las contraseñas no coinciden";
+    if (form.password !== form.passwordConfirmation) errors.passwordConfirmation = t('register.errors.passwordMismatch');
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -95,7 +94,7 @@ export function RegisterPage() {
             <p>{t('register.subtitle')}</p>
           </div>
 
-          {!validated && <p role="alert">{error || (en?'Checking your link…':'Comprobando tu enlace…')} <Link to="/register">{en?'Request another link':'Solicitar otro enlace'}</Link></p>}
+          {!validated && <p role="alert">{error || t('register.checkingLink')} <Link to="/register">{t('register.requestAnother')}</Link></p>}
           {validated && <form onSubmit={submit} noValidate data-testid="register-form">
             <div className="mb-3">
               <label className="form-label" htmlFor="register-name">
@@ -178,11 +177,11 @@ export function RegisterPage() {
             </div>
 
             <div className="mb-3">
-              <label className="form-label" htmlFor="register-confirm">{en?'Confirm password':'Confirmar contraseña'}</label>
+              <label className="form-label" htmlFor="register-confirm">{t('register.confirmPassword')}</label>
               <input id="register-confirm" type={showPasswords?'text':'password'} className="form-control" autoComplete="new-password"
                 value={form.passwordConfirmation} onChange={update('passwordConfirmation')} data-testid="register-password-confirmation" required />
               {fieldErrors.passwordConfirmation && <p className="text-danger" role="alert">{fieldErrors.passwordConfirmation}</p>}
-              <label className="form-check mt-2"><input className="form-check-input" type="checkbox" checked={showPasswords} onChange={e=>setShowPasswords(e.target.checked)}/>{en?'Show passwords':'Mostrar contraseñas'}</label>
+              <label className="form-check mt-2"><input className="form-check-input" type="checkbox" checked={showPasswords} onChange={e=>setShowPasswords(e.target.checked)}/>{t('register.showPasswords')}</label>
             </div>
             {error && (
               <div className="alert alert-danger py-2 small" role="alert" data-testid="register-error">

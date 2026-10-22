@@ -1,9 +1,9 @@
-import UNITS from '../../../../packages/ui-data/units.json';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
+import { unitLabel } from '../utils/units';
 
 interface Props {
   item: Item;
@@ -30,8 +30,7 @@ const relativeDate = (iso: string | null, t: TFunction): string => {
  */
 export function PurchasedItem({ item, disabled, showDates, onRestore, onClose, onEdit }: Props) {
   const { t, i18n } = useTranslation();
-  const knownUnit=UNITS.find(u=>u.value===item.unit);
-  const unitLabel=knownUnit?(i18n.language.startsWith('en')?knownUnit.en:knownUnit.es):item.unit;
+  const localizedUnit = unitLabel(item.unit, i18n.language);
   return (
     <li
       className="lc-item lc-item--comprado"
@@ -56,7 +55,7 @@ export function PurchasedItem({ item, disabled, showDates, onRestore, onClose, o
           {item.name}
         </div>
         <div className="lc-item-meta">
-          {(Number(item.quantity)!==1||item.unit!=='pza')&&<span className="lc-hint" data-testid="purchased-quantity">{Number(item.quantity)} {unitLabel}</span>}
+          {(Number(item.quantity)!==1||item.unit!=='pza')&&<span className="lc-hint" data-testid="purchased-quantity">{Number(item.quantity)} {localizedUnit}</span>}
           <span className="lc-hint" data-testid="purchased-meta">
             {item.purchasedByName ? `${item.purchasedByName} · ` : ''}
             {relativeDate(item.purchasedAt, t)}

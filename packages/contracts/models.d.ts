@@ -10,9 +10,9 @@ export type UserRole = 'user' | 'admin';
 export type DevicePlatform = 'ios' | 'android' | 'web';
 
 export type { Locale as SupportedLocale, EnabledLocale } from './locales';
-import type { Locale as SupportedLocale, EnabledLocale } from './locales';
-/** Published clients only understand complete enabled catalogs. */
-export type Locale = EnabledLocale;
+import type { Locale as SupportedLocale, LegacyLocale } from './locales';
+/** Published clients only understand es/en here; the full choice is `preferredLocale`. */
+export type Locale = LegacyLocale;
 
 /**
  * Tipos de aviso conocidos. `AppNotification.type` es un texto abierto: el backend

@@ -7,7 +7,6 @@ import { pt } from './pt';
 import { de } from './de';
 import { fr } from './fr';
 
-// Draft locales stay hidden until their release coverage is complete.
 export const LANGUAGES = ENABLED_LOCALES;
 export type Language = (typeof LANGUAGES)[number];
 

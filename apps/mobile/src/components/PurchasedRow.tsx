@@ -1,4 +1,3 @@
-import UNITS from '../../../../packages/ui-data/units.json';
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +6,7 @@ import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
+import { unitLabel } from '../utils/units';
 
 interface Props {
   item: Item;
@@ -22,8 +22,7 @@ interface Props {
 /** Producto comprado: se muestra tachado y se quita con la "x" */
 export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit, showDates }: Props) {
   const { t, i18n } = useTranslation();
-  const knownUnit=UNITS.find(u=>u.value===item.unit);
-  const unitLabel=knownUnit?(i18n.language.startsWith('en')?knownUnit.en:knownUnit.es):item.unit;
+  const localizedUnit = unitLabel(item.unit, i18n.language);
   return (
     <View style={[styles.row, !first && styles.divided]} testID="purchased-item">
       <Pressable
@@ -42,7 +41,7 @@ export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit
           {item.name}
         </Text>
         <View style={styles.metaRow}>
-          {(Number(item.quantity)!==1||item.unit!=='pza')&&<Text style={styles.meta} testID="purchased-quantity">{Number(item.quantity)} {unitLabel}</Text>}
+          {(Number(item.quantity)!==1||item.unit!=='pza')&&<Text style={styles.meta} testID="purchased-quantity">{Number(item.quantity)} {localizedUnit}</Text>}
           {item.purchasedByName ? <Text style={styles.meta}>{item.purchasedByName}</Text> : null}
           {item.isRecurring && item.daysUntilReactivation !== null && (
             <Badge

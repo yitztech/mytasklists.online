@@ -68,6 +68,15 @@ export const en: Catalog<typeof es> = {
       password: 'At least 8 characters',
     },
   },
+  registrationRequest: {
+    unavailable: 'Email registration is not available on this server yet. Please try again later.',
+    title: 'Create your account',
+    intro: 'Verify your email first. Complete your details using the link in your browser, then sign in here.',
+    sent: 'If you can register with this address, you will receive a link. Already have an account? Sign in or reset your password.',
+    resendIn: 'Resend in {{seconds}}s',
+    send: 'Send link',
+    signIn: 'Sign in',
+  },
   forgot: {
     title: 'Recover your account',
     subtitle: "We'll send you a link to choose a new password.",
@@ -102,6 +111,10 @@ export const en: Catalog<typeof es> = {
     share: 'Share',
     shareEmail: 'email@example.com',
     shareSubmit: 'Share list',
+    quantity: 'Quantity', unit: 'Unit', customUnit: 'Custom…', unitName: 'Unit name', photoOptional: 'Photo (optional)',
+    invitationSent: 'Invitation sent', invitationSentBody: 'A registration link was sent to {{email}}.',
+    pendingInvitations: 'Pending invitations', noPendingInvitations: 'No pending invitations.', expires: 'Expires', cancelInvitation: 'Cancel invitation',
+    invalidQuantity: 'Enter a valid quantity and unit.', itemAdded: 'Item added', photoUploadFailed: 'The photo could not be uploaded.',
     notify: 'Notify me of changes',
     pendingHeading: 'To buy ({{count}})',
     purchasedHeading: 'Bought ({{count}})',
@@ -128,6 +141,15 @@ export const en: Catalog<typeof es> = {
     restore: 'Move {{name}} back to the to-buy list',
     returnsIn: 'back in {{count}} d',
     close: 'Remove {{name}} from the list',
+  },
+  editItem: {
+    invalid: 'Check the item details', saveFailed: 'Could not save item', title: 'Edit item', name: 'Name', note: 'Note',
+    quantity: 'Quantity', unit: 'Unit', custom: 'Custom…', unitName: 'Unit name', repeat: 'Repeat automatically',
+    repeatEvery: 'Repeat every (days)', image: 'Item photo', save: 'Save', saving: 'Saving…',
+  },
+  photo: {
+    cameraPermission: 'Camera permission required', libraryPermission: 'Photo library permission required',
+    openFailed: 'Could not open the photo', tryAnother: 'Try another image.', take: 'Take photo', choose: 'Choose photo', remove: 'Remove photo',
   },
   settings: {
     noWhatsapp: 'No WhatsApp number',
@@ -157,6 +179,9 @@ export const en: Catalog<typeof es> = {
     language: 'Language',
     languageHint: 'It is also used for the emails and notifications we send you.',
     logout: 'Sign out',
+  },
+  billing: {
+    missingToken:'Missing purchase token',noProduct:'No store product is available.',offerUnavailable:'This offer is not available for your store account.',codeUnavailable:'This code is unavailable for your store account.',title:'My plan',free:'Free',manage:'Manage or cancel',month:'month',promo:'Promotional code',redeemStore:'Redeem store offer code',apply:'Apply code',months:'{{count}} months',billingPeriod:'billing period',renewals:'{{count}} renewals',review:'Review the final amount and monthly renewal in the payment screen. Cancel from My plan or the store.',continue:'Continue to payment',comingSoon:'Paid subscriptions are coming soon. Continue free.',restore:'Restore purchases',
   },
   push: {
     channel: 'Shared lists',
@@ -191,5 +216,6 @@ export const en: Catalog<typeof es> = {
     needed: ' and version {{version}} or later is required.',
     store: 'Go to the store',
     searchStore: 'Search for MyTaskLists in your phone’s app store.',
+    downloads: 'See downloads', useWeb: 'Use web app',
   },
 };

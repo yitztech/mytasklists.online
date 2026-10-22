@@ -1,9 +1,9 @@
-import UNITS from '../../../../packages/ui-data/units.json';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
+import { unitLabel } from '../utils/units';
 
 interface Props {
   item: Item;
@@ -17,7 +17,7 @@ interface Props {
 }
 
 const formatQuantity = (item: Item, language: string): string =>
-  `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2)} ${UNITS.find(u=>u.value===item.unit)?.[language.startsWith('en')?'en':'es'] || item.unit}`;
+  `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toFixed(2)} ${unitLabel(item.unit, language)}`;
 
 /**
  * Fila de un producto pendiente.

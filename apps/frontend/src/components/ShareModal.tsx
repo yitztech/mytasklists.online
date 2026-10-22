@@ -14,7 +14,6 @@ interface Props {
 
 export function ShareModal({ list, currentUserId, onClose, onChanged, onNotice }: Props) {
   const { t, i18n } = useTranslation();
-  const en = i18n.language.startsWith('en');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export function ShareModal({ list, currentUserId, onClose, onChanged, onNotice }
     try {
       await listsApi.revokeInvitation(list.id, invitation.id);
       setPending(current => current.filter(i => i.id !== invitation.id));
-      onNotice(en ? 'Invitation canceled' : 'Invitación cancelada', true);
+      onNotice(t('share.invitationCancelled'), true);
     } catch (err) { setError(err instanceof ApiError ? err.message : t('share.failed')); }
     finally { setCanceling(null); }
   };
@@ -124,17 +123,17 @@ export function ShareModal({ list, currentUserId, onClose, onChanged, onNotice }
                 </p>
               )}
 
-              {isOwner && <section className="mb-4" aria-label={en ? 'Pending invitations' : 'Invitaciones pendientes'}>
-                <h6 className="lc-section-title">{en ? 'Pending invitations' : 'Invitaciones pendientes'}</h6>
-                {loadingInvites ? <p role="status">{en ? 'Loading…' : 'Cargando…'}</p> : pending.length === 0
-                  ? <p className="text-muted small">{en ? 'No pending invitations.' : 'No hay invitaciones pendientes.'}</p>
+              {isOwner && <section className="mb-4" aria-label={t('share.pendingInvitations')}>
+                <h6 className="lc-section-title">{t('share.pendingInvitations')}</h6>
+                {loadingInvites ? <p role="status">{t('share.loadingInvitations')}</p> : pending.length === 0
+                  ? <p className="text-muted small">{t('share.noPendingInvitations')}</p>
                   : <ul className="list-group list-group-flush">{pending.map(invite => <li key={invite.id}
                       className="list-group-item d-flex align-items-center gap-2 px-0" data-testid="pending-invitation">
                     <div className="flex-grow-1 min-w-0"><div className="text-break">{invite.email}</div>
-                      <small className="text-muted">{en ? 'Expires' : 'Expira'} {new Date(invite.expiresAt).toLocaleDateString(i18n.language)}</small></div>
+                      <small className="text-muted">{t('share.expires')} {new Date(invite.expiresAt).toLocaleDateString(i18n.language)}</small></div>
                     <button type="button" className="btn btn-sm btn-outline-danger" disabled={canceling !== null}
-                      aria-label={`${en ? 'Cancel invitation to' : 'Cancelar invitación a'} ${invite.email}`}
-                      onClick={() => void cancel(invite)}>{canceling === invite.id ? (en ? 'Canceling…' : 'Cancelando…') : (en ? 'Cancel' : 'Cancelar')}</button>
+                      aria-label={t('share.cancelInvitation', { email: invite.email })}
+                      onClick={() => void cancel(invite)}>{canceling === invite.id ? t('share.canceling') : t('share.cancel')}</button>
                   </li>)}</ul>}
               </section>}
               <h6 className="lc-section-title mb-2">{t('share.members', { count: list.members.length })}</h6>

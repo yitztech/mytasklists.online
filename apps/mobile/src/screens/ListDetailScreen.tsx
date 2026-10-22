@@ -1,6 +1,5 @@
 import { useAuth } from '../context/AuthContext';
 import { Picker } from '@react-native-picker/picker';
-import UNITS from '../../../../packages/ui-data/units.json';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +25,7 @@ import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
 import { itemImageForm } from '../utils/item-image';
+import { localizedUnits } from '../utils/units';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,7 +41,6 @@ export function ListDetailScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<PendingInvitation[]>([]);
   const { t, i18n } = useTranslation();
-  const en=i18n.language.startsWith('en');
   const [quantity,setQuantity]=useState('1');
   const [unit,setUnit]=useState('pza');
   const [customUnit,setCustomUnit]=useState('');
@@ -164,9 +163,9 @@ export function ListDetailScreen({ route, navigation }: any) {
   const addItem = async () => {
     if (!name.trim() || busy) return;
     const amount=Number(quantity.replace(',','.'));const selected=unit==='custom'?customUnit.trim():unit;
-    if(!Number.isFinite(amount)||amount<0.01||amount>99999||Math.abs(Math.round(amount*100)-amount*100)>1e-7||!selected||selected.length>20){Alert.alert(t('common.oops'),en?'Enter a valid quantity and unit.':'Escribe una cantidad y unidad válidas.');return;}
+    if(!Number.isFinite(amount)||amount<0.01||amount>99999||Math.abs(Math.round(amount*100)-amount*100)>1e-7||!selected||selected.length>20){Alert.alert(t('common.oops'),t('detail.invalidQuantity'));return;}
     setBusy(true);
-    try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{})});const selectedPhoto=photo;setName('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(en?'Item added':'Elemento agregado',en?'The photo could not be uploaded.':'No se pudo subir la foto.');}}await load();}
+    try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{})});const selectedPhoto=photo;setName('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(t('detail.itemAdded'),t('detail.photoUploadFailed'));}}await load();}
     catch(e){Alert.alert(t('common.oops'),(e as Error).message);}finally{setBusy(false);}
   };
 
@@ -208,15 +207,15 @@ export function ListDetailScreen({ route, navigation }: any) {
           returnKeyType="done"
         />
 
-        <Text style={{color:colors.ink,marginTop:spacing.md}}>{en?'Quantity':'Cantidad'}</Text>
-        <TextInput accessibilityLabel={en?'Quantity':'Cantidad'} style={styles.addInput} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" testID="item-quantity-input"/>
-        <Text style={{color:colors.ink}}>{en?'Unit':'Unidad'}</Text>
-        <Picker accessibilityLabel={en?'Unit':'Unidad'} selectedValue={unit} onValueChange={setUnit} testID="item-unit-input" style={{color:colors.ink}}>
-          {UNITS.map(u=><Picker.Item key={u.value} label={en?u.en:u.es} value={u.value}/>)}
-          <Picker.Item label={en?'Custom…':'Personalizado…'} value="custom"/>
+        <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('detail.quantity')}</Text>
+        <TextInput accessibilityLabel={t('detail.quantity')} style={styles.addInput} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" testID="item-quantity-input"/>
+        <Text style={{color:colors.ink}}>{t('detail.unit')}</Text>
+        <Picker accessibilityLabel={t('detail.unit')} selectedValue={unit} onValueChange={setUnit} testID="item-unit-input" style={{color:colors.ink}}>
+          {localizedUnits(i18n.language).map(u=><Picker.Item key={u.value} label={u.label} value={u.value}/>)}
+          <Picker.Item label={t('detail.customUnit')} value="custom"/>
         </Picker>
-        {unit==='custom' && <TextInput accessibilityLabel={en?'Unit name':'Nombre de la unidad'} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={en?'Unit name':'Nombre de la unidad'} testID="item-custom-unit"/>}
-        <Text style={{ color: colors.ink, marginTop: spacing.md }}>{en ? 'Photo (optional)' : 'Foto (opcional)'}</Text><ItemPhotoPicker uri={photo} onChange={setPhoto} />
+        {unit==='custom' && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
+        <Text style={{ color: colors.ink, marginTop: spacing.md }}>{t('detail.photoOptional')}</Text><ItemPhotoPicker uri={photo} onChange={setPhoto} />
         <View style={styles.recurRow}>
           <Text style={styles.recurLabel}>{t('detail.repeat')}</Text>
           <Switch
@@ -303,19 +302,19 @@ export function ListDetailScreen({ route, navigation }: any) {
             onPress={() =>
               guard(async () => {
                 const result = await listsApi.share(listId, shareEmail.trim().toLowerCase());
-                if (result.invitationSent) Alert.alert(en ? 'Invitation sent' : 'Invitación enviada', en ? `A registration link was sent to ${result.invitationEmail}.` : `Enviamos un enlace de registro a ${result.invitationEmail}.`);
+                if (result.invitationSent && result.invitationEmail) Alert.alert(t('detail.invitationSent'), t('detail.invitationSentBody', { email: result.invitationEmail }));
                 setShareEmail('');
                 setPending(await listsApi.invitations(listId));
               })
             }
             style={{ marginTop: spacing.sm }}
           />
-          <SectionLabel>{en ? 'Pending invitations' : 'Invitaciones pendientes'}</SectionLabel>
-          {pending.length === 0 ? <Text style={{color:colors.inkSoft}}>{en ? 'No pending invitations.' : 'No hay invitaciones pendientes.'}</Text>
+          <SectionLabel>{t('detail.pendingInvitations')}</SectionLabel>
+          {pending.length === 0 ? <Text style={{color:colors.inkSoft}}>{t('detail.noPendingInvitations')}</Text>
             : pending.map(invite => <View key={invite.id} style={{paddingVertical:spacing.sm, gap:spacing.sm}} testID="pending-invitation">
               <Text style={{color:colors.ink}}>{invite.email}</Text>
-              <Text style={{color:colors.inkSoft}}>{en ? 'Expires' : 'Expira'} {new Date(invite.expiresAt).toLocaleDateString(i18n.language)}</Text>
-              <Button title={en ? 'Cancel invitation' : 'Cancelar invitación'} disabled={busy}
+              <Text style={{color:colors.inkSoft}}>{t('detail.expires')} {new Date(invite.expiresAt).toLocaleDateString(i18n.language)}</Text>
+              <Button title={t('detail.cancelInvitation')} disabled={busy}
                 onPress={() => guard(async () => { await listsApi.revokeInvitation(listId, invite.id); setPending(await listsApi.invitations(listId)); })} />
             </View>)}
           </>}

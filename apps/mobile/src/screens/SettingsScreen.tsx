@@ -70,7 +70,7 @@ export function SettingsScreen({ navigation }: any) {
       </Card>
 
       <Card style={{ marginTop: spacing.lg }}>
-        <View style={styles.languageRow} testID="language-card">
+        <View style={styles.languageBlock} testID="language-card">
           <Text style={styles.rowLabel}>{t('settings.language')}</Text>
           <LanguageSwitcher />
         </View>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 14, color: colors.inkSoft, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.line, marginVertical: spacing.lg },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  languageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  languageBlock: { gap: spacing.sm },
   rowLabel: { color: colors.inkSoft, fontSize: 14 },
   rowValue: { color: colors.ink, fontSize: 14, fontWeight: '600', textTransform: 'capitalize' },
 });

@@ -1,4 +1,7 @@
 import type { EnabledLocale } from '@lista/contracts/locales';
+import { NOTIFICATIONS_PT } from '../../i18n/notifications.pt';
+import { NOTIFICATIONS_DE } from '../../i18n/notifications.de';
+import { NOTIFICATIONS_FR } from '../../i18n/notifications.fr';
 
 /**
  * Textos de los avisos (pop-up en la web y push en el teléfono). Se generan en el
@@ -34,4 +37,13 @@ const en: typeof es = {
   listShared: (actor, list) => `${actor ?? 'Someone'} shared the list "${list}" with you`,
 };
 
-export const NOTIFICATION_TEXTS: Record<EnabledLocale, typeof es> = { es, en };
+export type NotificationTexts = typeof es;
+
+/** pt/de/fr viven en catálogos de `src/i18n` */
+export const NOTIFICATION_TEXTS: Record<EnabledLocale, NotificationTexts> = {
+  es,
+  en,
+  pt: NOTIFICATIONS_PT,
+  de: NOTIFICATIONS_DE,
+  fr: NOTIFICATIONS_FR,
+};

@@ -2,30 +2,25 @@ import { LOCALE_CONFIG } from '@lista/contracts/locales';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES, setLanguage } from '../i18n';
 
-/** Selector ES / EN. La elección se guarda y gana sobre el idioma del navegador */
+/** Selector común de idioma. La elección se guarda en el navegador. */
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const { t, i18n } = useTranslation();
 
   return (
-    <div
-      className={`lc-lang ${className}`}
-      role="group"
-      aria-label={t('language.label')}
-      data-testid="language-switcher"
+    <label className={`lc-lang ${className}`} data-testid="language-switcher">
+      <span className="visually-hidden">{t('language.label')}</span>
+      <i className="bi bi-translate" aria-hidden="true" />
+      <select
+        aria-label={t('language.label')}
+        value={i18n.language}
+        onChange={(event) => setLanguage(event.target.value as (typeof LANGUAGES)[number])}
     >
-      {LANGUAGES.map((language) => (
-        <button
-          key={language}
-          type="button"
-          onClick={() => setLanguage(language)}
-          aria-pressed={i18n.language === language}
-          title={LOCALE_CONFIG[language].name}
-          lang={language}
-          data-testid={`language-${language}`}
-        >
-          {language.toUpperCase()}
-        </button>
-      ))}
-    </div>
+        {LANGUAGES.map((language) => (
+          <option key={language} value={language} lang={language} data-testid={`language-${language}`}>
+            {LOCALE_CONFIG[language].name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

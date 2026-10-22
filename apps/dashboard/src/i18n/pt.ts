@@ -145,4 +145,21 @@ export const pt: Catalog<typeof es> = {
     required:
       'Para proteger os dados das pessoas, o painel exige a verificação em duas etapas. Ative-a para continuar.',
   },
+  promotionsPage: {
+    title: 'Códigos promocionais',
+    intro: 'Crie descontos para assinaturas web e de download direto. As ofertas das lojas são gerenciadas nos respectivos consoles.',
+    code: 'Código',
+    type: 'Tipo de desconto',
+    discount: 'Desconto',
+    months: 'Meses com desconto',
+    uses: 'Máximo de usos',
+    expiry: 'Validade (opcional)',
+    create: 'Criar promoção',
+    note: 'Estas campanhas valem para novos assinantes. Os descontos não se acumulam.',
+    status: 'Status',
+    action: 'Ação',
+    active: 'Ativo',
+    inactive: 'Inativo',
+    disable: 'Desativar',
+  },
 };

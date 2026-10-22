@@ -5,10 +5,10 @@ import { API_URL, ApiError } from '../api/client';
 import { itemsApi } from '../api/endpoints';
 import type { Item } from '../types';
 import { prepareItemImage } from '../utils/item-image';
+import { localizedUnits } from '../utils/units';
 
 export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item; onClose: () => void; onSaved: () => void; onError: (message: string) => void }) {
   const { t, i18n } = useTranslation();
-  const en = i18n.language.startsWith('en');
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? '');
   const [quantity, setQuantity] = useState(String(item.quantity));
@@ -47,7 +47,7 @@ export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item;
     const amount = Number(quantity.replace(',', '.'));
     const selectedUnit = unit === 'custom' ? customUnit.trim() : unit;
     if (!name.trim() || /[\x00-\x1F\x7F]/.test(name.trim()) || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selectedUnit || selectedUnit.length > 20) {
-      onError(en ? 'Enter a valid name, quantity and unit.' : 'Escribe un nombre, cantidad y unidad válidos.'); return;
+      onError(t('editItem.invalid')); return;
     }
     setSaving(true);
     try {
@@ -63,17 +63,17 @@ export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item;
 
   return <div ref={dialogRef} style={{ background: 'rgba(0, 0, 0, 0.4)' }} className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="edit-item-title" onMouseDown={(e) => { if (!saving && e.target === e.currentTarget) onClose(); }}>
     <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable"><form className="modal-content" onSubmit={save}>
-      <div className="modal-header"><h2 className="modal-title fs-5" id="edit-item-title">{en ? 'Edit item' : 'Editar elemento'}</h2><button type="button" className="btn-close" onClick={onClose} disabled={saving} aria-label={t('common.close')} /></div>
+      <div className="modal-header"><h2 className="modal-title fs-5" id="edit-item-title">{t('editItem.title')}</h2><button type="button" className="btn-close" onClick={onClose} disabled={saving} aria-label={t('common.close')} /></div>
       <div className="modal-body d-grid gap-3">
-        <div><label className="form-label" htmlFor="edit-item-name">{en ? 'Name' : 'Nombre'}</label><input id="edit-item-name" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={140} /></div>
-        <div><label className="form-label" htmlFor="edit-item-note">{en ? 'Note' : 'Nota'}</label><textarea id="edit-item-note" className="form-control" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={2} /></div>
-        <div className="row g-2"><div className="col-5"><label className="form-label" htmlFor="edit-item-quantity">{en ? 'Quantity' : 'Cantidad'}</label><input id="edit-item-quantity" className="form-control" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div><div className="col"><label className="form-label" htmlFor="edit-item-unit">{en ? 'Unit' : 'Unidad'}</label><select id="edit-item-unit" className="form-select" value={unit} onChange={(e) => setUnit(e.target.value)}>{UNITS.map((u) => <option key={u.value} value={u.value}>{en ? u.en : u.es}</option>)}<option value="custom">{en ? 'Custom…' : 'Personalizado…'}</option></select></div></div>
-        {unit === 'custom' && <div><label className="form-label" htmlFor="edit-custom-unit">{en ? 'Unit name' : 'Nombre de la unidad'}</label><input id="edit-custom-unit" className="form-control" value={customUnit} onChange={(e) => setCustomUnit(e.target.value)} maxLength={20} required /></div>}
+        <div><label className="form-label" htmlFor="edit-item-name">{t('editItem.name')}</label><input id="edit-item-name" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={140} /></div>
+        <div><label className="form-label" htmlFor="edit-item-note">{t('editItem.note')}</label><textarea id="edit-item-note" className="form-control" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={2} /></div>
+        <div className="row g-2"><div className="col-5"><label className="form-label" htmlFor="edit-item-quantity">{t('editItem.quantity')}</label><input id="edit-item-quantity" className="form-control" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div><div className="col"><label className="form-label" htmlFor="edit-item-unit">{t('editItem.unit')}</label><select id="edit-item-unit" className="form-select" value={unit} onChange={(e) => setUnit(e.target.value)}>{localizedUnits(i18n.language).map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}<option value="custom">{t('editItem.custom')}</option></select></div></div>
+        {unit === 'custom' && <div><label className="form-label" htmlFor="edit-custom-unit">{t('editItem.unitName')}</label><input id="edit-custom-unit" className="form-control" value={customUnit} onChange={(e) => setCustomUnit(e.target.value)} maxLength={20} required /></div>}
         <div className="form-check form-switch"><input className="form-check-input" id="edit-item-recurring" type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} /><label className="form-check-label" htmlFor="edit-item-recurring">{t('addItem.repeat')}</label></div>
-        {recurring && <div><label className="form-label" htmlFor="edit-item-days">{en ? 'Repeat every (days)' : 'Repetir cada (días)'}</label><input id="edit-item-days" className="form-control" type="number" min="1" max="365" value={days} onChange={(e) => setDays(e.target.value)} /></div>}
-        <div><label className="form-label" htmlFor="edit-item-image">{en ? 'Item photo' : 'Imagen del elemento'}</label><input ref={fileRef} id="edit-item-image" className="form-control" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setRemoveImage(false); }} />{(file || (imageUrl && !removeImage)) && <div className="d-flex align-items-center gap-3 mt-2"><img src={previewUrl ?? imageUrl!} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} /><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => { setFile(null); setRemoveImage(true); if (fileRef.current) fileRef.current.value = ''; }}>{en ? 'Remove image' : 'Quitar imagen'}</button></div>}</div>
+        {recurring && <div><label className="form-label" htmlFor="edit-item-days">{t('editItem.repeatEvery')}</label><input id="edit-item-days" className="form-control" type="number" min="1" max="365" value={days} onChange={(e) => setDays(e.target.value)} /></div>}
+        <div><label className="form-label" htmlFor="edit-item-image">{t('editItem.image')}</label><input ref={fileRef} id="edit-item-image" className="form-control" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setRemoveImage(false); }} />{(file || (imageUrl && !removeImage)) && <div className="d-flex align-items-center gap-3 mt-2"><img src={previewUrl ?? imageUrl!} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} /><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => { setFile(null); setRemoveImage(true); if (fileRef.current) fileRef.current.value = ''; }}>{t('editItem.removeImage')}</button></div>}</div>
       </div>
-      <div className="modal-footer"><button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={saving}>{t('common.cancel')}</button><button className="btn btn-primary" disabled={saving}>{saving ? t('common.loading') : (en ? 'Save changes' : 'Guardar cambios')}</button></div>
+      <div className="modal-footer"><button type="button" className="btn btn-outline-secondary" onClick={onClose} disabled={saving}>{t('common.cancel')}</button><button className="btn btn-primary" disabled={saving}>{saving ? t('common.loading') : t('editItem.save')}</button></div>
     </form></div>
   </div>;
 }

@@ -7,7 +7,6 @@ import { pt } from './pt';
 import { de } from './de';
 import { fr } from './fr';
 
-// Draft locales stay hidden until their release coverage is complete.
 export const LANGUAGES = ENABLED_LOCALES;
 export type Language = (typeof LANGUAGES)[number];
 
@@ -18,7 +17,7 @@ const isLanguage = (value: unknown): value is Language => isEnabledLocale(value)
 
 /**
  * La elección guardada gana; si no hay, se usa el primer idioma del navegador que
- * soportamos. Un navegador en otro idioma (francés, alemán…) ve la app en inglés.
+ * soportamos. Un navegador en otro idioma ve la app en inglés.
  */
 export function detectLanguage(): Language {
   try {

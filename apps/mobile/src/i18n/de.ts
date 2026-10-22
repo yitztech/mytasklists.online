@@ -67,6 +67,15 @@ export const de: Catalog<typeof es> = {
       password: 'Mindestens 8 Zeichen',
     },
   },
+  registrationRequest: {
+    unavailable: 'Die Registrierung per E-Mail ist auf diesem Server noch nicht verfügbar. Versuche es später erneut.',
+    title: 'Konto erstellen',
+    intro: 'Bestätige zuerst deine E-Mail-Adresse. Vervollständige deine Daten über den Link im Browser und melde dich danach hier an.',
+    sent: 'Wenn du dich mit dieser E-Mail-Adresse registrieren kannst, erhältst du einen Link. Du hast bereits ein Konto? Melde dich an oder setze dein Passwort zurück.',
+    resendIn: 'Erneut senden in {{seconds}}s',
+    send: 'Link senden',
+    signIn: 'Anmelden',
+  },
   forgot: {
     title: 'Konto wiederherstellen',
     subtitle: 'Wir senden dir einen Link, um ein neues Passwort zu wählen.',
@@ -101,6 +110,10 @@ export const de: Catalog<typeof es> = {
     share: 'Teilen',
     shareEmail: 'email@beispiel.de',
     shareSubmit: 'Liste teilen',
+    quantity: 'Menge', unit: 'Einheit', customUnit: 'Benutzerdefiniert…', unitName: 'Name der Einheit', photoOptional: 'Foto (optional)',
+    invitationSent: 'Einladung gesendet', invitationSentBody: 'Ein Registrierungslink wurde an {{email}} gesendet.',
+    pendingInvitations: 'Ausstehende Einladungen', noPendingInvitations: 'Keine ausstehenden Einladungen.', expires: 'Läuft ab', cancelInvitation: 'Einladung stornieren',
+    invalidQuantity: 'Gib eine gültige Menge und Einheit ein.', itemAdded: 'Artikel hinzugefügt', photoUploadFailed: 'Das Foto konnte nicht hochgeladen werden.',
     notify: 'Bei Änderungen benachrichtigen',
     pendingHeading: 'Zu kaufen ({{count}})',
     purchasedHeading: 'Gekauft ({{count}})',
@@ -127,6 +140,15 @@ export const de: Catalog<typeof es> = {
     restore: '{{name}} wieder zu den offenen Artikeln',
     returnsIn: 'wieder in {{count}} T',
     close: '{{name}} aus der Liste entfernen',
+  },
+  editItem: {
+    invalid: 'Prüfe die Artikeldaten', saveFailed: 'Artikel konnte nicht gespeichert werden', title: 'Artikel bearbeiten', name: 'Name', note: 'Notiz',
+    quantity: 'Menge', unit: 'Einheit', custom: 'Benutzerdefiniert…', unitName: 'Name der Einheit', repeat: 'Automatisch wiederholen',
+    repeatEvery: 'Wiederholen alle (Tage)', image: 'Artikelfoto', save: 'Speichern', saving: 'Wird gespeichert…',
+  },
+  photo: {
+    cameraPermission: 'Kamerazugriff erforderlich', libraryPermission: 'Zugriff auf die Fotomediathek erforderlich',
+    openFailed: 'Foto konnte nicht geöffnet werden', tryAnother: 'Versuche es mit einem anderen Bild.', take: 'Foto aufnehmen', choose: 'Foto auswählen', remove: 'Foto entfernen',
   },
   settings: {
     noWhatsapp: 'Keine WhatsApp-Nummer registriert',
@@ -156,6 +178,9 @@ export const de: Catalog<typeof es> = {
     language: 'Sprache',
     languageHint: 'Wird auch für E-Mails und Benachrichtigungen verwendet.',
     logout: 'Abmelden',
+  },
+  billing: {
+    missingToken:'Kauftoken fehlt',noProduct:'Im Store ist kein Produkt verfügbar.',offerUnavailable:'Dieses Angebot ist für dein Store-Konto nicht verfügbar.',codeUnavailable:'Dieser Code ist für dein Store-Konto nicht verfügbar.',title:'Mein Tarif',free:'Kostenlos',manage:'Verwalten oder kündigen',month:'Monat',promo:'Aktionscode',redeemStore:'Store-Angebotscode einlösen',apply:'Code anwenden',months:'{{count}} Monate',billingPeriod:'Abrechnungszeitraum',renewals:'{{count}} Verlängerungen',review:'Prüfe Endbetrag und monatliche Verlängerung auf dem Zahlungsbildschirm. Kündige unter Mein Tarif oder im Store.',continue:'Weiter zur Zahlung',comingSoon:'Kostenpflichtige Abonnements sind bald verfügbar. Nutze den kostenlosen Tarif weiter.',restore:'Käufe wiederherstellen',
   },
   push: {
     channel: 'Geteilte Listen',
@@ -190,5 +215,6 @@ export const de: Catalog<typeof es> = {
     needed: ' und Version {{version}} oder höher wird benötigt.',
     store: 'Zum Store',
     searchStore: 'Suche im App Store deines Telefons nach MyTaskLists.',
+    downloads: 'Downloads anzeigen', useWeb: 'Web-App verwenden',
   },
 };

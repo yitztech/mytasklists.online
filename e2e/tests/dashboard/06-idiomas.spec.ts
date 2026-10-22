@@ -5,7 +5,7 @@ test.describe('Dashboard · idiomas', () => {
     await page.goto('/dashboard/login');
     await expect(page.getByTestId('login-card').getByRole('heading')).toHaveText('Panel de administración');
 
-    await page.getByTestId('language-en').click();
+    await page.getByTestId('language-switcher').locator('select').selectOption('en');
     await expect(page.getByTestId('login-card').getByRole('heading')).toHaveText('Admin panel');
     await expect(page.getByTestId('login-submit')).toHaveText('Sign in');
 
