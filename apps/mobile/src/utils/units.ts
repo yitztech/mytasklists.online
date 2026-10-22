@@ -1,5 +1,7 @@
 import { normalizeLocale } from '@lista/contracts/locales';
 import UNITS from '../../../../packages/ui-data/units.json';
+// Sentinel value for a unit the user types in.
+export const CUSTOM_UNIT = 'custom';
 
 export const unitLabel = (value: string, language: string): string => {
   const unit = UNITS.find((entry) => entry.value === value);

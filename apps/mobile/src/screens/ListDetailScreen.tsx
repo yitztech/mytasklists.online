@@ -25,7 +25,7 @@ import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
 import { itemImageForm } from '../utils/item-image';
-import { localizedUnits } from '../utils/units';
+import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -162,7 +162,7 @@ export function ListDetailScreen({ route, navigation }: any) {
 
   const addItem = async () => {
     if (!name.trim() || busy) return;
-    const amount=Number(quantity.replace(',','.'));const selected=unit==='custom'?customUnit.trim():unit;
+    const amount=Number(quantity.replace(',','.'));const selected=unit===CUSTOM_UNIT?customUnit.trim():unit;
     if(!Number.isFinite(amount)||amount<0.01||amount>99999||Math.abs(Math.round(amount*100)-amount*100)>1e-7||!selected||selected.length>20){Alert.alert(t('common.oops'),t('detail.invalidQuantity'));return;}
     setBusy(true);
     try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{})});const selectedPhoto=photo;setName('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(t('detail.itemAdded'),t('detail.photoUploadFailed'));}}await load();}
@@ -210,8 +210,8 @@ export function ListDetailScreen({ route, navigation }: any) {
         <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('detail.quantity')}</Text>
         <TextInput accessibilityLabel={t('detail.quantity')} style={styles.addInput} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" testID="item-quantity-input"/>
         <Text style={{color:colors.ink}}>{t('detail.unit')}</Text>
-        <SelectField label={t('detail.unit')} value={unit} onChange={setUnit} testID="item-unit-input" options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:'custom'}]}/>
-        {unit==='custom' && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
+        <SelectField label={t('detail.unit')} value={unit} onChange={setUnit} testID="item-unit-input" options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:CUSTOM_UNIT}]}/>
+        {unit===CUSTOM_UNIT && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
         <Text style={{ color: colors.ink, marginTop: spacing.md }}>{t('detail.photoOptional')}</Text><ItemPhotoPicker uri={photo} onChange={setPhoto} />
         <View style={styles.recurRow}>
           <Text style={styles.recurLabel}>{t('detail.repeat')}</Text>

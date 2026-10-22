@@ -10,17 +10,17 @@ import { API_URL } from '../api/client';
 import { colors, radius, spacing } from '../theme';
 import type { Item } from '../types';
 import { itemImageForm } from '../utils/item-image';
-import { localizedUnits } from '../utils/units';
+import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 
 export function EditItemModal({ item, onClose, onSaved }: { item: Item | null; onClose: () => void; onSaved: () => void }) {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState(item?.name ?? ''); const [note, setNote] = useState(item?.note ?? ''); const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
-  const known = UNITS.some((u) => u.value === item?.unit); const [unit, setUnit] = useState(known ? item?.unit ?? 'pza' : 'custom');
+  const known = UNITS.some((u) => u.value === item?.unit); const [unit, setUnit] = useState(known ? item?.unit ?? 'pza' : CUSTOM_UNIT);
   const [customUnit, setCustomUnit] = useState(known ? '' : item?.unit ?? ''); const [recurring, setRecurring] = useState(item?.isRecurring ?? false);
   const [days, setDays] = useState(String(item?.recurrenceDays ?? 14)); const [photo, setPhoto] = useState<string | null>(null); const [clearPhoto, setClearPhoto] = useState(false); const [saving, setSaving] = useState(false);
   const closePhoto = (uri: string | null) => { setPhoto(uri); setClearPhoto(uri === null); };
   const save = async () => {
-    if (!item || saving) return; const amount = Number(quantity.replace(',', '.')); const selected = unit === 'custom' ? customUnit.trim() : unit;
+    if (!item || saving) return; const amount = Number(quantity.replace(',', '.')); const selected = unit === CUSTOM_UNIT ? customUnit.trim() : unit;
     if (!name.trim() || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selected || selected.length > 20) { Alert.alert(t('editItem.invalid')); return; }
     setSaving(true);
     try {
@@ -34,8 +34,8 @@ export function EditItemModal({ item, onClose, onSaved }: { item: Item | null; o
     <Text style={styles.label}>{t('editItem.name')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.name')} testID="edit-item-name" value={name} onChangeText={setName} maxLength={140} />
     <Text style={styles.label}>{t('editItem.note')}</Text><TextInput style={[styles.input, { minHeight: 76 }]} accessibilityLabel={t('editItem.note')} value={note} onChangeText={setNote} multiline maxLength={300} />
     <Text style={styles.label}>{t('editItem.quantity')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.quantity')} testID="edit-item-quantity" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
-    <Text style={styles.label}>{t('editItem.unit')}</Text><SelectField label={t('editItem.unit')} testID="edit-item-unit" value={unit} onChange={setUnit} options={[...localizedUnits(i18n.language), { label: t('editItem.custom'), value: 'custom' }]} />
-    {unit === 'custom' && <TextInput accessibilityLabel={t('editItem.unitName')} style={styles.input} testID="edit-custom-unit" value={customUnit} onChangeText={setCustomUnit} maxLength={20} />}
+    <Text style={styles.label}>{t('editItem.unit')}</Text><SelectField label={t('editItem.unit')} testID="edit-item-unit" value={unit} onChange={setUnit} options={[...localizedUnits(i18n.language), { label: t('editItem.custom'), value: CUSTOM_UNIT }]} />
+    {unit === CUSTOM_UNIT && <TextInput accessibilityLabel={t('editItem.unitName')} style={styles.input} testID="edit-custom-unit" value={customUnit} onChangeText={setCustomUnit} maxLength={20} />}
     <View style={styles.switchRow}><Text style={styles.label}>{t('editItem.repeat')}</Text><Switch value={recurring} onValueChange={setRecurring} trackColor={{ true: colors.brand }} /></View>
     {recurring && <><Text style={styles.label}>{t('editItem.repeatEvery')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.repeatEvery')} value={days} onChangeText={setDays} keyboardType="number-pad" /></>}
     <Text style={styles.label}>{t('editItem.image')}</Text><ItemPhotoPicker uri={photo ?? (!clearPhoto && item?.imageUrl ? `${API_URL}${item.imageUrl}` : null)} onChange={closePhoto} />
