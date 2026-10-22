@@ -12,4 +12,5 @@ appId: online.mytasklists.app
 - extendedWaitUntil:
     visible:
       id: login-screen
-    timeout: 20000
+    # Arranque en frío: en Android la app de desarrollo descarga el bundle de Metro
+    timeout: 60000

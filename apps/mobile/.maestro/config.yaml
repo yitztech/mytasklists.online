@@ -1,4 +1,5 @@
 # Flujos de Maestro sobre la app nativa (simulador de iOS o emulador de Android).
-# La pila de Docker tiene que estar arriba. Ver README → "Pruebas en la app nativa".
+# Se ejecutan con `npm run mobile:test` (crea la cuenta, prepara el simulador y
+# registra la verificación). Ver docs/PRUEBAS-MOVILES.md.
 flows:
   - flows/*

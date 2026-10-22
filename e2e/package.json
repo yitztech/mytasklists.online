@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "install:browsers": "playwright install --with-deps chromium",
-    "test": "playwright test",
+    "test": "npm run test:parallel && npm run test:isolated",
+    "test:parallel": "playwright test --grep-invert @aislado",
+    "test:isolated": "playwright test --grep @aislado --workers=1",
     "test:backend": "playwright test --project=backend-api",
     "test:frontend": "playwright test --project=frontend",
     "test:dashboard": "playwright test --project=dashboard",
     "test:landing": "playwright test --project=landing",
-    "test:mobile": "playwright test --project=mobile-app",
+    "test:mobile": "E2E_MOBILE=1 playwright test --project=mobile-app",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report playwright-report",
     "evidence": "node utils/list-evidence.mjs"

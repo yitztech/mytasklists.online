@@ -3,3 +3,6 @@ node_modules/
 dist/
 web-build/
 *.log
+# Pruebas en simulador: resultados y huella del binario instalado (la verificación sí se versiona)
+.maestro/resultados/
+.maestro/.build-*.json

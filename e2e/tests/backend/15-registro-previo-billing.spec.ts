@@ -1,4 +1,5 @@
 import {expect,test} from '@playwright/test';
+import { resetRegistrationRequests } from '../../utils/stack';
 import {API_URL,uniqueEmail,uniqueWhatsapp,DEFAULT_PASSWORD,registerUser,auth,createList,createItem} from '../../utils/api-helpers';
 import { MAILPIT_URL } from '../../utils/mailpit';
 import {requestRegistration} from '../../utils/registration';
@@ -12,6 +13,7 @@ test('REG-01/06/07/11/19 · correo primero, enlace no consume y alta una sola ve
  expect((await request.post(`${API_URL}/auth/registration/complete`,{data:{...fields(),token}})).status()).toBe(400);
 });
 test('REG-04 · correo existente no genera enlace de alta',async({request})=>{
+ resetRegistrationRequests('ana@example.com');
  const r=await request.post(`${API_URL}/auth/registration/request`,{data:{email:'ana@example.com'}});expect(r.status()).toBe(200);expect(await r.json()).toEqual({ok:true,cooldownSeconds:60});
  const mail=await request.get(`${MAILPIT_URL}/api/v1/search`,{params:{query:'to:"ana@example.com" subject:"Completa tu registro"'}});expect((await mail.json()).messages.length).toBe(0);
 });
@@ -30,7 +32,11 @@ test('PAY-02/07/PRO-14 · estado Gratis, no acceso por cliente y admin protegido
  expect((await request.get(`${API_URL}/billing/admin/promotions`,{headers})).status()).toBe(403);
  expect((await request.post(`${API_URL}/billing/webhook/stripe`,{data:{id:'fake'}})).status()).toBeGreaterThanOrEqual(400);
 });
-test('DES-01 · tiendas no publicadas y sin artefactos ficticios',async({request})=>{const r=await request.get(`${API_URL}/distribution`);expect(r.status()).toBe(200);expect(await r.json()).toEqual({android:{storeUrl:null,apk:null},ios:{storeUrl:null,testflightUrl:null}});});
+test('DES-01 · tiendas no publicadas y sin artefactos ficticios',async({request})=>{const r=await request.get(`${API_URL}/distribution`);expect(r.status()).toBe(200);const body=await r.json();
+ expect(body.android.storeUrl).toBeNull();expect(body.ios).toEqual({storeUrl:null,testflightUrl:null});
+ // Un APK solo aparece si es real: firmado, con su hash y descargable desde el propio sitio
+ if(body.android.apk){const apk=body.android.apk;expect(apk.version).toMatch(/^\d+\.\d+\.\d+/);expect(apk.sha256).toMatch(/^[a-f0-9]{64}$/);expect(apk.url).toMatch(/^\/downloads\/mytasklists-[\d.]+\.apk$/);const file=await request.head(apk.url.replace(/^/,API_URL.replace(/\/api$/,'')));expect(file.status()).toBe(200);}
+});
 test('UNI-02/03/04/06 · unidades y cantidades persisten sin alterar recurrencia',async({request})=>{const user=await registerUser(request);const list=await createList(request,user.accessToken,'Unidades');
  for(const unit of ['pza','lb','kg','g','l','ml','oz','bolsas']){const item=await createItem(request,user.accessToken,list.id,{name:'Producto '+unit,unit,quantity:1.5,isRecurring:true,recurrenceDays:3});expect(item.unit).toBe(unit);expect(item.quantity).toBe(1.5);const purchased=await request.post(`${API_URL}/items/${item.id}/purchase`,{headers:auth(user.accessToken)});expect((await purchased.json()).unit).toBe(unit);}
  for(const payload of [{quantity:0},{quantity:-1},{quantity:1.111},{unit:' '},{unit:'x'.repeat(21)}]){const r=await request.post(`${API_URL}/lists/${list.id}/items`,{headers:auth(user.accessToken),data:{name:'Inválido',...payload}});expect(r.status()).toBe(400);}

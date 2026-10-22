@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { createItem, createList, registerUser, shareList } from '../../utils/api-helpers';
+import { createItem, createList, registerUser, shareList, uniqueEmail } from '../../utils/api-helpers';
 import { pendingItem, purchasedItem, useSession, waitForRealtime } from '../../utils/ui-helpers';
 
 /**
@@ -68,7 +68,7 @@ test.describe('Frontend web · listas compartidas en tiempo real', () => {
     await useSession(page, ana);
     await page.goto(`/app/lists/${list.id}`);
     await page.getByTestId('share-button').click();
-    await page.getByTestId('share-email-input').fill('nadie.registrado@example.com');
+    await page.getByTestId('share-email-input').fill(uniqueEmail('sin-cuenta'));
     await page.getByTestId('share-submit').click();
 
     await expect(page.getByText(/el enlace para crear una cuenta y unirse a la lista/i)).toBeVisible();

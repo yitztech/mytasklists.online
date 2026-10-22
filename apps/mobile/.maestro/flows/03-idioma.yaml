@@ -3,6 +3,13 @@ name: Idioma · cambiar entre español e inglés con el selector
 ---
 - runFlow: ../subflows/abrir-sin-sesion.yaml
 
+# Primero un idioma que nunca es el del sistema: así el nombre que se toca es siempre
+# una opción de la lista y no el valor que ya muestra el selector
+- tapOn:
+    id: language-switcher
+- tapOn: Français
+- assertVisible: Vos listes partagées, toujours synchronisées.
+
 - tapOn:
     id: language-switcher
 - tapOn: English

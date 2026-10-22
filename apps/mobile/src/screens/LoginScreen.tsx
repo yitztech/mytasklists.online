@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  type TextInput,
   Linking,
   Platform,
   Pressable,
@@ -24,6 +25,7 @@ export function LoginScreen({ navigation }: any) {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const passwordRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,9 +158,13 @@ export function LoginScreen({ navigation }: any) {
               keyboardType="email-address"
               textContentType="emailAddress"
               placeholder={t('login.emailPlaceholder')}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordRef.current?.focus()}
             />
 
             <Field
+              ref={passwordRef}
               label={t('common.password')}
               testID="login-password"
               value={password}
@@ -166,6 +172,8 @@ export function LoginScreen({ navigation }: any) {
               secureTextEntry
               textContentType="password"
               placeholder="••••••••"
+              returnKeyType="go"
+              onSubmitEditing={submit}
             />
 
             {error ? (

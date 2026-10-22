@@ -1,15 +1,13 @@
-# Entra con la cuenta que dejó scripts/crear-cuenta.js en output.cuenta
+# Entra con la cuenta que crea scripts/mobile-test.mjs (EMAIL y PASSWORD)
 appId: online.mytasklists.app
 ---
 - tapOn:
     id: login-email
-- inputText: ${output.cuenta.email}
-- tapOn:
-    id: login-password
-- inputText: ${output.cuenta.password}
-- hideKeyboard
-- tapOn:
-    id: login-submit
+- inputText: ${EMAIL}
+# Intro pasa a la contraseña y después envía: el teclado tapa esos campos en pantallas pequeñas
+- pressKey: Enter
+- inputText: ${PASSWORD}
+- pressKey: Enter
 - runFlow:
     when:
       platform: iOS

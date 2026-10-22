@@ -377,12 +377,12 @@ npm --prefix e2e install
 npm --prefix e2e run install:browsers
 
 # desde la raíz del repositorio
-npm run test:e2e                 # los 5 proyectos (162 casos)
+npm run test:e2e                 # API, web, panel y landing (lo mismo que CI)
 npm run test:e2e:backend         # solo la API
 npm run test:e2e:frontend        # solo la app web
 npm run test:e2e:dashboard       # solo el panel
 npm run test:e2e:landing         # solo la landing
-npm run test:e2e:mobile          # levanta el build web de React Native
+npm run test:e2e:mobile          # app móvil en el navegador: solo en local, a pedido
 npm run test:e2e:report          # informe HTML
 npm run evidence                 # imprime el índice de videos
 ```
@@ -406,30 +406,29 @@ e2e/evidence/
 | `frontend`   | 39    | si |
 | `dashboard`  | 15    | si |
 | `landing`    | 7     | si |
-| `mobile-app` | 18    | si |
+| `mobile-app` | 18    | si (solo en local y a pedido: `npm run test:e2e:mobile`) |
 
 El catálogo completo está en [`docs/CASOS-DE-PRUEBA.md`](docs/CASOS-DE-PRUEBA.md).
 
 ### En la app nativa con Maestro
 
-Playwright prueba la app móvil sobre su build web. [Maestro](https://maestro.mobile.dev) la
-maneja en el simulador de iOS, tocando y escribiendo como una persona.
+Las pruebas de la app móvil corren **solo en local y a pedido**, en un simulador o emulador instalado
+(no en CI). [Maestro](https://maestro.mobile.dev) maneja la app tocando y escribiendo como una persona.
+Ninguna app se genera sin pasarlas antes con el mismo código. Guía completa:
+[`docs/PRUEBAS-MOVILES.md`](docs/PRUEBAS-MOVILES.md).
 
 ```bash
 # una sola vez (instala también OpenJDK)
 brew install mobile-dev-inc/tap/maestro
 
-docker compose up -d --build                  # la pila tiene que estar arriba
-npm --prefix apps/mobile run ios:release      # compila la app (Release) y la instala en el simulador
-npm run test:maestro                          # corre apps/mobile/.maestro/flows
+npm run up                     # la pila tiene que estar arriba
+npm run mobile:test            # simulador de iOS «iPhone 17»
+npm run mobile:test:android    # emulador de Android «Medium_Tablet» (API 35)
 ```
 
-- El build Release lleva el JavaScript adentro: no hace falta Metro. Hay que recompilar después
-  de cambiar la app.
-- Cada flujo crea su propia cuenta contra la API (`.maestro/scripts/crear-cuenta.js`). Para otra
-  API: `maestro test -e API_URL=https://... .maestro`.
+- El binario de desarrollo solo se recompila si cambia la parte nativa; el JavaScript llega por Metro.
+- Los flujos comparten una cuenta que crea el script (`${EMAIL}` y `${PASSWORD}`).
 - `maestro studio` abre un inspector para ver los `testID` de la pantalla y armar flujos nuevos.
-- Si `maestro` no encuentra Java: `export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home`.
 
 | Flujo | Qué comprueba |
 | --- | --- |

@@ -95,7 +95,8 @@ test('SEC-02 rol de aplicación permite datos y rechaza cambios de esquema y rol
   expect(JSON.parse(result)).toEqual({flags:{rolsuper:false,rolcreaterole:false,rolcreatedb:false},denied:[true,true,true]});
 });
 
-test('ARC-01 SMTP caído conserva el correo cifrado y no retiene una transacción de registro', async ({request}) => {
+// Detiene Mailpit: corre aparte, al final y en serie (`@aislado`), para no tumbar los correos de las demás pruebas
+test('ARC-01 SMTP caído conserva el correo cifrado y no retiene una transacción de registro', { tag: '@aislado' }, async ({request}) => {
   const email=uniqueEmail('outbox');
   execFileSync('docker',['compose','stop','mailpit'],{cwd:'..',stdio:'pipe'});
   try {
