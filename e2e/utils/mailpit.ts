@@ -4,7 +4,7 @@ import type { APIRequestContext } from '@playwright/test';
  * Lectura de la bandeja de Mailpit (SMTP de desarrollo del docker-compose),
  * para probar de punta a punta los correos de verificación y recuperación.
  */
-export const MAILPIT_URL = (process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:8025').replace(/\/$/, '');
+export const MAILPIT_URL = (process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:8028').replace(/\/$/, '');
 
 interface MailpitSummary {
   ID: string;

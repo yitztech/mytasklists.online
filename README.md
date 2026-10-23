@@ -15,7 +15,7 @@ queda en la lista pero cambia de color.
 
 ```
                        ┌──────────────────────────────┐
-   navegador  ────────▶│  nginx  ·  proxy web  :8080  │
+   navegador  ────────▶│  nginx  ·  proxy web  :8084  │
    app móvil  ────────▶└──────────────┬───────────────┘
                                       │
         ┌───────────────┬─────────────┼─────────────┬────────────────┐
@@ -33,14 +33,14 @@ queda en la lista pero cambia de color.
 
 | Servicio    | Tecnología                                  | Ruta pública   |
 | ----------- | ------------------------------------------- | -------------- |
-| `nginx`     | nginx 1.30 (proxy inverso, WebSocket, gzip, cabeceras de seguridad) | `:8080` |
+| `nginx`     | nginx 1.30 (proxy inverso, WebSocket, gzip, cabeceras de seguridad) | `:8084` |
 | `landing`   | HTML/CSS estático + nginx                   | `/`            |
 | `frontend`  | React 19 + TypeScript 7 + Vite 8 + Bootstrap 5 | `/app/`     |
 | `dashboard` | React 19 + TypeScript 7 + Vite 8 + Bootstrap 5 | `/dashboard/` |
 | `backend`   | NestJS 12 sobre Fastify + TypeORM 1 (Node 24, TypeScript 6) | `/api/` |
-| `postgres`  | PostgreSQL 18                               | `127.0.0.1:5432` |
-| `redis`     | Redis 8 (con contraseña)                    | `127.0.0.1:6379` |
-| `mailpit`   | Mailpit (SMTP de desarrollo)                | `127.0.0.1:8025` |
+| `postgres`  | PostgreSQL 18                               | `127.0.0.1:5464` |
+| `redis`     | Redis 8 (con contraseña)                    | `127.0.0.1:6384` |
+| `mailpit`   | Mailpit (SMTP de desarrollo)                | `127.0.0.1:8028` |
 | App móvil   | React Native 0.86 (Expo SDK 57) — iOS y Android | tiendas     |
 
 ---
@@ -62,12 +62,12 @@ Cuando los ocho contenedores estén `healthy`:
 
 | Qué                       | Dónde                                |
 | ------------------------- | ------------------------------------ |
-| Landing / descargas       | http://localhost:8080/               |
-| Aplicación web            | http://localhost:8080/app/           |
-| Panel de administración   | http://localhost:8080/dashboard/     |
-| API                       | http://localhost:8080/api/health     |
-| Documentación OpenAPI     | http://localhost:8080/api/docs       |
-| Correos enviados (Mailpit)| http://localhost:8025/               |
+| Landing / descargas       | http://localhost:8084/               |
+| Aplicación web            | http://localhost:8084/app/           |
+| Panel de administración   | http://localhost:8084/dashboard/     |
+| API                       | http://localhost:8084/api/health     |
+| Documentación OpenAPI     | http://localhost:8084/api/docs       |
+| Correos enviados (Mailpit)| http://localhost:8028/               |
 
 ### Cuentas de demostración
 
@@ -150,8 +150,8 @@ npm run web        # misma app en el navegador (lo que usan las pruebas)
 Apunta la app al backend con `apps/mobile/app.json` → `expo.extra.apiUrl`, o con variables:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://192.168.1.50:8080/api \
-EXPO_PUBLIC_SOCKET_URL=http://192.168.1.50:8080 npm start
+EXPO_PUBLIC_API_URL=http://192.168.1.50:8084/api \
+EXPO_PUBLIC_SOCKET_URL=http://192.168.1.50:8084 npm start
 ```
 
 Compilaciones para las tiendas con EAS (`eas.json` ya incluido):
@@ -193,7 +193,7 @@ exige; sin él, la app sigue funcionando y los avisos llegan por WebSocket.
   quitar el 2FA de otra cuenta si perdió el teléfono.
 
 Los correos salen por SMTP. En desarrollo el compose trae **Mailpit**, que los captura todos
-en http://localhost:8025. En producción sirve cualquier proveedor SMTP (Amazon SES, Resend,
+en http://localhost:8028. En producción sirve cualquier proveedor SMTP (Amazon SES, Resend,
 Postmark, SendGrid…):
 
 ```dotenv
@@ -218,7 +218,7 @@ verificando el `id_token` contra los JWKS de Google). Se activan en cuanto hay c
    usuarios de prueba: publícala para abrirla a todos.
 2. En **Credenciales → Crear ID de cliente OAuth → Aplicación web** agrega la URI de
    redirección `https://TU_DOMINIO/api/auth/google/callback` (y
-   `http://localhost:8080/api/auth/google/callback` para desarrollo).
+   `http://localhost:8084/api/auth/google/callback` para desarrollo).
 3. Para la app móvil crea también un ID de cliente **iOS** (bundle `online.mytasklists.app`) y
    uno **Android** (paquete `online.mytasklists.app` + huella SHA-1 del keystore:
    `npx eas credentials`).
@@ -367,7 +367,7 @@ como respaldo. Cuando compruebes que todo está bien: `docker volume rm mytaskli
 
 **162 casos** repartidos en cinco proyectos, uno por servicio más la app móvil.
 Todos los casos con interfaz **graban un video de evidencia**. Los de correo leen la bandeja
-de Mailpit (`E2E_MAILPIT_URL`, por defecto http://localhost:8025).
+de Mailpit (`E2E_MAILPIT_URL`, por defecto http://localhost:8028).
 
 ```bash
 docker compose up -d --build     # la pila tiene que estar arriba
@@ -489,12 +489,12 @@ docker compose up -d postgres redis mailpit
 npm install        # una vez, en la raíz: instala todos los workspaces
 cd apps/backend   && POSTGRES_HOST=localhost REDIS_HOST=localhost REDIS_PASSWORD=lista_dev_redis \
                      SMTP_HOST=localhost SMTP_PORT=1025 npm run start:dev
-cd apps/frontend  && npm run dev     # http://localhost:5173/app/
+cd apps/frontend  && npm run dev     # http://localhost:5176/app/
 cd apps/dashboard && npm run dev     # http://localhost:5174/dashboard/
 cd apps/landing   && npm run dev     # http://localhost:5175/
 ```
 
-Los servidores de Vite ya redirigen `/api` y `/socket.io` a `http://localhost:8080`; si corres
+Los servidores de Vite ya redirigen `/api` y `/socket.io` a `http://localhost:8084`; si corres
 el backend directamente en el host, cambia el `target` en el `vite.config.ts` correspondiente a
 `http://localhost:3000`.
 

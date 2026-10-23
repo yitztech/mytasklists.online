@@ -33,8 +33,8 @@ if (!['ios', 'android'].includes(platform)) throw new Error('--platform debe ser
 
 const MOBILE = join(ROOT, 'apps/mobile');
 const APP_ID = 'online.mytasklists.app';
-const API_URL = 'http://127.0.0.1:8080/api';
-const MAILPIT_URL = 'http://127.0.0.1:8025';
+const API_URL = 'http://127.0.0.1:8084/api';
+const MAILPIT_URL = 'http://127.0.0.1:8028';
 const METRO_PORT = 8081;
 const ANDROID_SDK = process.env.ANDROID_HOME || join(homedir(), 'Library/Android/sdk');
 const ADB = join(ANDROID_SDK, 'platform-tools/adb');
@@ -45,8 +45,8 @@ const appEnv = {
   JAVA_HOME,
   ANDROID_HOME: ANDROID_SDK,
   CI: '1',
-  EXPO_PUBLIC_API_URL: 'http://localhost:8080/api',
-  EXPO_PUBLIC_SOCKET_URL: 'http://localhost:8080',
+  EXPO_PUBLIC_API_URL: 'http://localhost:8084/api',
+  EXPO_PUBLIC_SOCKET_URL: 'http://localhost:8084',
 };
 
 const log = (message) => console.log(`[mobile-test] ${message}`);
@@ -69,7 +69,7 @@ async function reachable(url) {
 
 // ── 1. Pila local ──────────────────────────────────────────────────────────
 if (!(await reachable(`${API_URL}/health`))) {
-  throw new Error('La pila local no responde en http://localhost:8080. Levántala con: npm run up');
+  throw new Error('La pila local no responde en http://localhost:8084. Levántala con: npm run up');
 }
 
 // ── 2. Cuenta de prueba (registro completo por correo, vía Mailpit) ────────
@@ -88,7 +88,7 @@ async function createAccount() {
     const detail = await (await fetch(`${MAILPIT_URL}/api/v1/message/${message.ID}`)).json();
     token = /register\/complete#token=([\w-]+)/.exec(detail.Text)?.[1];
   }
-  if (!token) throw new Error('No llegó el correo de alta a Mailpit (http://localhost:8025)');
+  if (!token) throw new Error('No llegó el correo de alta a Mailpit (http://localhost:8028)');
   const whatsapp = `+52155${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
   const completed = await post('/auth/registration/complete', {
     token, fullName: 'Persona Maestro', whatsapp, password, passwordConfirmation: password,
@@ -136,8 +136,8 @@ async function bootAndroid(name = 'Medium_Tablet') {
   sh(ADB, ['-s', serial, 'shell', 'settings', 'put', 'system', 'screen_off_timeout', '2147483647']);
   sh(ADB, ['-s', serial, 'shell', 'input', 'keyevent', 'KEYCODE_WAKEUP']);
   sh(ADB, ['-s', serial, 'shell', 'wm', 'dismiss-keyguard']);
-  // localhost del emulador → tu máquina: API (8080) y Metro (8081)
-  for (const port of [8080, METRO_PORT]) sh(ADB, ['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);
+  // localhost del emulador → tu máquina: API (8084) y Metro (8081)
+  for (const port of [8084, METRO_PORT]) sh(ADB, ['-s', serial, 'reverse', `tcp:${port}`, `tcp:${port}`]);
   return { id: serial, name };
 }
 
