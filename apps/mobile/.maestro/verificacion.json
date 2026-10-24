@@ -1,14 +1,10 @@
 {
-  "sourceHash": "a39ba070a732b8241bc6399264c7460a818a098be7e468d57e1d048adf38356f",
-  "version": "2.5.1",
+  "sourceHash": "119f6466c1aca8f63de8328e3f6af0a32ff80b5ee07c86e90c6af397ff099da5",
+  "version": "2.5.2",
   "runs": {
     "android": {
       "device": "Medium_Tablet",
-      "passedAt": "2026-10-22T04:48:26.473Z"
-    },
-    "ios": {
-      "device": "iPhone 17",
-      "passedAt": "2026-10-22T04:49:47.211Z"
+      "passedAt": "2026-10-24T20:50:57.501Z"
     }
   }
 }
