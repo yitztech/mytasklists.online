@@ -120,6 +120,7 @@ export const es = {
     purchasedHeading: 'Comprados ({{count}})',
     allDone: 'No queda nada pendiente en esta lista.',
     whatToDo: '¿Qué quieres hacer?',
+    menu: 'Más opciones',
     delete: 'Eliminar',
     advance: 'Adelantar 14 días',
     deleteList: 'Eliminar la lista',

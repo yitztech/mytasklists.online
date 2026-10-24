@@ -185,6 +185,16 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
       assert.ok(calculatedBottomPadding >= 144, `Padding inferior ${calculatedBottomPadding}dp debe superar 144dp`);
       assert.ok(spacerHeight >= 112, `Espaciador ${spacerHeight}dp debe superar 112dp de holgura tras el botón`);
     });
+
+    it('Caso de éxito: ListDetailScreen usa un único menú contextual (3 puntos) para eliminar lista y retira opciones duplicadas', () => {
+      const screensDir = fileURLToPath(new URL('../../apps/mobile/src/screens/', import.meta.url));
+      const detailSource = fs.readFileSync(path.join(screensDir, 'ListDetailScreen.tsx'), 'utf8');
+      assert.match(detailSource, /testID="list-menu-button"/, 'Debe incluir botón de menú contextual de 3 puntos');
+      assert.match(detailSource, /testID="delete-list-button"/, 'Debe incluir opción para eliminar la lista');
+      assert.doesNotMatch(detailSource, /delete-list-button-bottom/, 'No debe tener botón duplicado al final de la pantalla');
+      const deleteMatches = detailSource.match(/testID="delete-list-button"/g) ?? [];
+      assert.strictEqual(deleteMatches.length, 1, 'Solo debe existir una única opción de eliminar lista');
+    });
   });
 
   describe('Formularios con teclado abierto (un solo toque en los botones)', () => {

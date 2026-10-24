@@ -119,6 +119,7 @@ export const de: Catalog<typeof es> = {
     purchasedHeading: 'Gekauft ({{count}})',
     allDone: 'Keine offenen Artikel auf dieser Liste.',
     whatToDo: 'Was möchtest du tun?',
+    menu: 'Weitere Optionen',
     delete: 'Löschen',
     advance: '14 Tage vorziehen',
     deleteList: 'Liste löschen',

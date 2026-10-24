@@ -1,9 +1,11 @@
 import { useAuth } from '../context/AuthContext';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
   Alert,
+  Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +34,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const SHOW_DATES_KEY = 'lc.mobile.showItemDates';
 
 const PRESETS = [3, 7, 14, 30];
+const MENU_OFFSET = Platform.select({ android: 52, default: 44 });
 
 export function ListDetailScreen({ route, navigation }: any) {
   const listId: string = route.params.id;
@@ -57,6 +60,28 @@ export function ListDetailScreen({ route, navigation }: any) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [showDates, setShowDates] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  useLayoutEffect(() => {
+    if (list?.ownerId === user?.id) {
+      navigation.setOptions({
+        headerRight: () => (
+          <Pressable
+            testID="list-menu-button"
+            accessibilityLabel={t('detail.menu')}
+            accessibilityRole="button"
+            onPress={() => setMenuVisible(true)}
+            hitSlop={12}
+            style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
+          >
+            <Text style={styles.menuButtonText}>⋮</Text>
+          </Pressable>
+        ),
+      });
+    } else {
+      navigation.setOptions({ headerRight: () => null });
+    }
+  }, [navigation, list?.ownerId, user?.id, t]);
 
   useEffect(() => {
     AsyncStorage.getItem(SHOW_DATES_KEY).then((value) => setShowDates(value === 'true')).catch(() => undefined);
@@ -177,8 +202,11 @@ export function ListDetailScreen({ route, navigation }: any) {
     );
   }
 
+  const menuTop = insets.top + (MENU_OFFSET ?? 44);
+
   return (
-    <ScrollView
+    <>
+      <ScrollView
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 + insets.bottom }}
       testID="list-detail-screen"
@@ -268,17 +296,6 @@ export function ListDetailScreen({ route, navigation }: any) {
         <Pressable onPress={() => setShowShare((value) => !value)} testID="share-button">
           <Text style={styles.linkAction}>{t('detail.share')}</Text>
         </Pressable>
-        {list.ownerId === user?.id && (
-          <Pressable
-            onPress={deleteList}
-            disabled={busy}
-            testID="delete-list-button"
-            accessibilityLabel={t('detail.deleteList')}
-            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingVertical: 8, paddingHorizontal: 4 }]}
-          >
-            <Text style={[styles.linkAction, { color: colors.danger }]}>{t('detail.deleteList')}</Text>
-          </Pressable>
-        )}
       </View>
 
       {showShare && (
@@ -398,19 +415,47 @@ export function ListDetailScreen({ route, navigation }: any) {
         </>
       )}
       {editingItem && <EditItemModal key={editingItem.id} item={editingItem} onClose={() => setEditingItem(null)} onSaved={() => { void load(); }} />}
-      {list.ownerId === user?.id && (
-        <View style={{ marginTop: spacing.xl, marginBottom: spacing.md }}>
-          <Button
-            title={t('detail.deleteList')}
-            variant="danger"
-            onPress={deleteList}
-            disabled={busy}
-            testID="delete-list-button-bottom"
-          />
-        </View>
-      )}
     </ScrollView>
-  );
+    {list.ownerId === user?.id && (
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => setMenuVisible(false)}
+          testID="list-menu-backdrop"
+        >
+          <View
+            style={[styles.menuCard, { top: menuTop, right: spacing.md }]}
+            onStartShouldSetResponder={() => true}
+          >
+            <Pressable
+              testID="delete-list-button"
+              accessibilityRole="menuitem"
+              accessibilityLabel={t('detail.deleteList')}
+              style={({ pressed }) => [
+                styles.menuItem,
+                pressed && { backgroundColor: colors.dangerSoft },
+              ]}
+              onPress={() => {
+                setMenuVisible(false);
+                setTimeout(() => {
+                  deleteList();
+                }, 100);
+              }}
+            >
+              <Text style={styles.menuItemIcon}>🗑️</Text>
+              <Text style={styles.menuItemText}>{t('detail.deleteList')}</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    )}
+  </>
+);
 }
 
 const styles = StyleSheet.create({
@@ -499,5 +544,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: spacing.xl,
+  },
+  menuButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuButtonPressed: {
+    opacity: 0.6,
+  },
+  menuButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.ink,
+    lineHeight: 24,
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: '#00000040',
+  },
+  menuCard: {
+    position: 'absolute',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    minWidth: 190,
+    paddingVertical: 4,
+    ...shadow.card,
+    elevation: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  menuItemIcon: {
+    fontSize: 16,
+  },
+  menuItemText: {
+    color: colors.danger,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

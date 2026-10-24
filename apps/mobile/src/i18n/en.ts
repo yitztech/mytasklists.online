@@ -120,6 +120,7 @@ export const en: Catalog<typeof es> = {
     purchasedHeading: 'Bought ({{count}})',
     allDone: 'Nothing left to buy on this list.',
     whatToDo: 'What do you want to do?',
+    menu: 'More options',
     delete: 'Delete',
     advance: 'Move forward 14 days',
     deleteList: 'Delete the list',
