@@ -78,6 +78,7 @@ export function DeleteAccountScreen({ navigation }: any) {
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.container,
           { paddingBottom: Math.max(insets.bottom, 48) + spacing.xxl * 3 },

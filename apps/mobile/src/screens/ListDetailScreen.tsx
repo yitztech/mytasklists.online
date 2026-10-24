@@ -182,6 +182,7 @@ export function ListDetailScreen({ route, navigation }: any) {
       style={{ flex: 1, backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 + insets.bottom }}
       testID="list-detail-screen"
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
