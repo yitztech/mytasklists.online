@@ -99,6 +99,7 @@ export function ListsScreen({ navigation }: any) {
       <FlatList
         data={lists}
         keyExtractor={(list) => list.id}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: 100 + insets.bottom }}
         refreshControl={
           <RefreshControl

@@ -41,7 +41,7 @@ export function BillingScreen(){
  }
  async function restore(){const store=await import('expo-iap');const purchases=await store.getAvailablePurchases();for(const p of purchases)if(p.productId===product?.id)await verify(p);await refresh();}
  const selectedOffer=selectAndroidOffer(product?.subscriptionOffers,plans?.stores.androidBasePlan||'monthly',offerId);
- return <ScrollView contentContainerStyle={{padding:spacing.lg,gap:spacing.md}} testID="billing-screen">
+ return <ScrollView contentContainerStyle={{padding:spacing.lg,gap:spacing.md}} keyboardShouldPersistTaps="handled" testID="billing-screen">
   <Text style={{fontSize:28,fontWeight:'800',color:colors.ink}}>{t('billing.title')}</Text>
   {error&&<Text accessibilityRole="alert" style={{color:colors.danger}}>{error}</Text>}
   <Text style={{color:colors.ink,fontSize:20}}>{state?.plan==='premium'?'Premium':t('billing.free')}</Text>

@@ -110,7 +110,7 @@ export function LoginScreen({ navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.bg }}
     >
-      <ScrollView contentContainerStyle={styles.container} testID="login-screen">
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="login-screen">
         <View style={styles.languageRow}>
           <LanguageSwitcher />
         </View>

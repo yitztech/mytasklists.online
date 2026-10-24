@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Pruebas unitarias y de comportamiento de Apps Móviles (iOS y Android)
@@ -182,6 +185,27 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
       assert.ok(calculatedBottomPadding >= 144, `Padding inferior ${calculatedBottomPadding}dp debe superar 144dp`);
       assert.ok(spacerHeight >= 112, `Espaciador ${spacerHeight}dp debe superar 112dp de holgura tras el botón`);
     });
+  });
+
+  describe('Formularios con teclado abierto (un solo toque en los botones)', () => {
+    // Con el valor por defecto ("never") el primer toque solo cierra el teclado y hay que
+    // tocar dos veces "Agregar" o "Crear". Toda pantalla con campos de texto dentro de un
+    // ScrollView/FlatList debe dejar pasar el toque a los botones.
+    const screensDir = fileURLToPath(new URL('../../apps/mobile/src/screens/', import.meta.url));
+    const screens = fs.readdirSync(screensDir).filter((file) => file.endsWith('.tsx'));
+
+    for (const file of screens) {
+      const source = fs.readFileSync(path.join(screensDir, file), 'utf8');
+      const hasInputs = /<(Field|TextInput)\b/.test(source);
+      const scrollers = source.match(/<(ScrollView|FlatList|SectionList)\b(?:=>|[^>])*>/gs) ?? [];
+      if (!hasInputs || scrollers.length === 0) continue;
+
+      it(`${file}: los contenedores con scroll usan keyboardShouldPersistTaps="handled"`, () => {
+        for (const tag of scrollers) {
+          assert.match(tag, /keyboardShouldPersistTaps="handled"/, `${file}: ${tag.split('\n')[0]}`);
+        }
+      });
+    }
   });
 
 });

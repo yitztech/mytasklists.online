@@ -35,7 +35,7 @@ export function ForgotPasswordScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} testID="forgot-screen">
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="forgot-screen">
       <Card>
         <Text style={styles.title}>{t('forgot.title')}</Text>
         {message ? (

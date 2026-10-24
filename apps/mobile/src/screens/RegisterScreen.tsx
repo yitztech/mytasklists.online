@@ -11,7 +11,7 @@ export function RegisterScreen({ navigation }: any) {
   const [error,setError]=useState('');const [seconds,setSeconds]=useState(0);
   useEffect(()=>{if(!seconds)return;const timer=setTimeout(()=>setSeconds(seconds-1),1000);return ()=>clearTimeout(timer);},[seconds]);
   async function submit(){setBusy(true);setError('');try{const compatibility=await compatApi.check();if((compatibility.registrationFlow||0)<2)throw new Error(t('registrationRequest.unavailable'));const r=await authApi.requestRegistration(email.trim().toLowerCase());setSent(true);setSeconds(r.cooldownSeconds);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <ScrollView contentContainerStyle={{padding:spacing.xl,flexGrow:1,justifyContent:'center'}} testID="register-screen">
+  return <ScrollView contentContainerStyle={{padding:spacing.xl,flexGrow:1,justifyContent:'center'}} keyboardShouldPersistTaps="handled" testID="register-screen">
     <Text style={{fontSize:28,fontWeight:'800',color:colors.ink}}>{t('registrationRequest.title')}</Text>
     <Text style={{color:colors.inkSoft,marginVertical:spacing.lg}}>{t('registrationRequest.intro')}</Text>
     <Field label={t('common.email')} value={email} onChangeText={v=>{setEmail(v);setSent(false);}} keyboardType="email-address" autoCapitalize="none" testID="register-email"/>
