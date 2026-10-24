@@ -12,7 +12,7 @@ import { CreateListDto } from '../apps/backend/dist/modules/lists/dto/list.dto.j
 import { CreateItemDto } from '../apps/backend/dist/modules/items/dto/item.dto.js';
 
 const FEATURES_DIR = path.resolve('e2e/features');
-const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8080';
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8084';
 const API_URL = process.env.E2E_API_URL ?? `${BASE_URL}/api`;
 
 console.log('================================================================');

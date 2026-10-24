@@ -9,7 +9,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5174,
     proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api': { target: 'http://localhost:8084', changeOrigin: true },
     },
   },
   build: { outDir: 'dist', sourcemap: false },

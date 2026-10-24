@@ -70,7 +70,7 @@ export class AuthService {
   ) {}
 
   private get publicUrl(): string {
-    return this.config.get<string>('publicUrl', 'http://localhost:8080');
+    return this.config.get<string>('publicUrl', 'http://localhost:8084');
   }
 
   // ── Emisión de sesiones ──────────────────────────────────────────────

@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    port: 5173,
+    port: 5176,
     proxy: {
-      '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:8080', ws: true, changeOrigin: true },
+      '/api': { target: 'http://localhost:8084', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:8084', ws: true, changeOrigin: true },
     },
   },
   build: {

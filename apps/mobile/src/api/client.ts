@@ -9,7 +9,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as { apiUrl?: string; socketUr
 export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL ??
   extra.apiUrl ??
-  'http://localhost:8080/api'
+  'http://localhost:8084/api'
 ).replace(/\/$/, '');
 
 export const SOCKET_URL = (

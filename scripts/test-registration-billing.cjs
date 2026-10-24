@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const {BillingService}=require('../apps/backend/dist/modules/billing/billing.service');
 const {RegistrationService}=require('../apps/backend/dist/modules/auth/registration.service');
 Object.assign(process.env,{BILLING_MODE:'test',STRIPE_SECRET_KEY:'sk_test_local_mock',BILLING_ENABLED:'true',BILLING_COMMERCE_READY:'true',STRIPE_PRICE_ID:'price_mock',STRIPE_WEBHOOK_SECRET:'mock',BILLING_BENEFITS_ES:'Configurado',BILLING_BENEFITS_EN:'Configured'});
-const config={get:()=> 'http://localhost:8080'};
+const config={get:()=> 'http://localhost:8084'};
 function billing(coupon={},restrictions={}){
  const p={id:'promo_test',code:'AHORRO',active:true,expires_at:null,max_redemptions:null,times_redeemed:0,customer:null,restrictions,promotion:{coupon:{valid:true,percent_off:20,amount_off:null,currency:null,duration:'once',duration_in_months:null,...coupon}}};
  const db={query:async()=>[],transaction:async fn=>fn({query:async sql=>sql.includes('billing_accounts')?[{customer_id:'cus_mock'}]:sql.includes('billing_checkouts')?[{session_id:'old'}]:[]})};

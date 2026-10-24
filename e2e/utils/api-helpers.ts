@@ -1,7 +1,7 @@
 import { receivedEmailIds, waitForEmail, tokenFromEmail } from './mailpit';
 import type { APIRequestContext } from '@playwright/test';
 
-export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8080';
+export const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8084';
 export const API_URL = process.env.E2E_API_URL ?? `${BASE_URL}/api`;
 
 /** Cuentas cargadas por el seed del backend */

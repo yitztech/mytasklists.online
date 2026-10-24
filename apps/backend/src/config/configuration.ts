@@ -144,7 +144,7 @@ const parseTrustProxy = (value: string | undefined): boolean | number => {
 export default (): AppConfig => {
   const env = process.env.NODE_ENV ?? 'development';
   const isProduction = env === 'production';
-  const publicUrl = process.env.PUBLIC_URL ?? 'http://localhost:8080';
+  const publicUrl = process.env.PUBLIC_URL ?? 'http://localhost:8084';
 
   // En desarrollo y pruebas los límites son holgados para no frenar la suite e2e;
   // en producción son estrictos. Cualquiera se puede fijar por variable de entorno.
@@ -160,7 +160,7 @@ export default (): AppConfig => {
     port: int(process.env.PORT, 3000),
     apiPrefix: process.env.API_PREFIX ?? 'api',
     publicUrl,
-    corsOrigins: list(process.env.CORS_ORIGINS ?? 'http://localhost:8080'),
+    corsOrigins: list(process.env.CORS_ORIGINS ?? 'http://localhost:8084'),
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
     bodyLimit: int(process.env.BODY_LIMIT_BYTES, 1024 * 1024),
     swaggerEnabled: bool(process.env.SWAGGER_ENABLED, !isProduction),
@@ -220,7 +220,7 @@ export default (): AppConfig => {
       clientId: googleClientId,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
       callbackUrl:
-        process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:8080/api/auth/google/callback',
+        process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:8084/api/auth/google/callback',
       enabled: Boolean(googleClientId && process.env.GOOGLE_CLIENT_SECRET),
       allowedAudiences: [googleClientId, ...list(process.env.GOOGLE_ALLOWED_AUDIENCES)].filter(Boolean),
     },
@@ -229,7 +229,7 @@ export default (): AppConfig => {
       teamId: process.env.APPLE_TEAM_ID ?? '',
       keyId: process.env.APPLE_KEY_ID ?? '',
       privateKey: (process.env.APPLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n'),
-      callbackUrl: process.env.APPLE_CALLBACK_URL ?? 'http://localhost:8080/api/auth/apple/callback',
+      callbackUrl: process.env.APPLE_CALLBACK_URL ?? 'http://localhost:8084/api/auth/apple/callback',
       bundleId: process.env.APPLE_BUNDLE_ID ?? 'online.mytasklists.app',
       enabled: Boolean(appleClientId && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID),
       allowedAudiences: [appleClientId, ...list(process.env.APPLE_ALLOWED_AUDIENCES)].filter(Boolean),
@@ -240,8 +240,8 @@ export default (): AppConfig => {
       minVersion: process.env.MOBILE_MIN_VERSION || '1.0.0',
       rolloutPhase: (process.env.MOBILE_ROLLOUT_PHASE || 'bridge') as 'bridge' | 'enforced',
       releaseReadyVersion: process.env.MOBILE_RELEASE_READY_VERSION || null,
-      downloadUrl: (process.env.PUBLIC_URL || 'http://localhost:8080').replace(/\/$/,'') + '/descargar/',
-      webUrl: (process.env.PUBLIC_URL || 'http://localhost:8080').replace(/\/$/,'') + '/app/',
+      downloadUrl: (process.env.PUBLIC_URL || 'http://localhost:8084').replace(/\/$/,'') + '/descargar/',
+      webUrl: (process.env.PUBLIC_URL || 'http://localhost:8084').replace(/\/$/,'') + '/app/',
       storeUrls: {
         ios: process.env.MOBILE_STORE_URL_IOS || null,
         android: process.env.MOBILE_STORE_URL_ANDROID || null,
