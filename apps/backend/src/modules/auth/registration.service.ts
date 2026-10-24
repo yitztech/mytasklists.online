@@ -41,7 +41,7 @@ export class RegistrationService {
         const token = randomBytes(32).toString('base64url');
         const ttl = Number(process.env.REGISTRATION_TTL_SECONDS || 1800);
         if (!exists) {
-          const base = this.config.get<string>('publicUrl', 'http://localhost:8080');
+          const base = this.config.get<string>('publicUrl', 'http://localhost:8084');
           await this.outbox.enqueue(m, email, registrationTemplate(locale, `${base}/app/register/complete#token=${token}${appFragment(app)}`, Math.ceil(ttl / 60)), 'registration', email, digest(token));
         }
         await m.query(`UPDATE registration_requests SET token_hash=$2, locale=$3, expires_at=now()+($4 * interval '1 second'),

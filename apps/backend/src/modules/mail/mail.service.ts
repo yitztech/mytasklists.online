@@ -6,7 +6,7 @@ import type { MailContent } from './mail.templates';
 /**
  * Envío de correo transaccional por SMTP.
  *
- * - En desarrollo el docker-compose apunta a Mailpit (http://localhost:8025).
+ * - En desarrollo el docker-compose apunta a Mailpit (http://localhost:8028).
  * - En producción sirve cualquier SMTP: Amazon SES, Resend, Postmark, SendGrid…
  * - Si no hay SMTP configurado el correo se escribe en el log, para no bloquear
  *   el registro en una instalación local sin correo.

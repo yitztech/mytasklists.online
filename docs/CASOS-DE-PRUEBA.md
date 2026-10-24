@@ -5,7 +5,7 @@
 Ejecución completa:
 
 ```bash
-docker compose up -d --build      # la pila debe estar arriba (incluye Mailpit en :8025)
+docker compose up -d --build      # la pila debe estar arriba (incluye Mailpit en :8028)
 npm run test:e2e                  # ejecuta los 5 proyectos
 npm run test:e2e:report           # abre el informe HTML
 ```

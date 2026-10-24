@@ -42,7 +42,7 @@ services:
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       # Solo accesible desde esta máquina (herramientas de BD locales)
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5464}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lista} -d ${POSTGRES_DB:-mytasklists}"]
       interval: 5s
@@ -64,7 +64,7 @@ services:
     volumes:
       - redis-data:/data
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6384}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -74,7 +74,7 @@ services:
     logging: *default-logging
 
   # ───────────────────── Correo de desarrollo (Mailpit) ───────────────
-  # Captura todos los correos que envía el backend. Bandeja: http://localhost:8025
+  # Captura todos los correos que envía el backend. Bandeja: http://localhost:8028
   mailpit:
     image: axllent/mailpit:v1.31.3
     container_name: lc-mailpit
@@ -83,7 +83,7 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: "true"
       MP_SMTP_AUTH_ALLOW_INSECURE: "true"
     ports:
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8028}:8025"
     networks: [lc-net]
     logging: *default-logging
 
@@ -153,8 +153,8 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_me}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8084}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8084}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-}
@@ -181,13 +181,13 @@ services:
       # Google / Apple
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:8080/api/auth/google/callback}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:8084/api/auth/google/callback}
       GOOGLE_ALLOWED_AUDIENCES: ${GOOGLE_ALLOWED_AUDIENCES:-}
       APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
       APPLE_KEY_ID: ${APPLE_KEY_ID:-}
       APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
-      APPLE_CALLBACK_URL: ${APPLE_CALLBACK_URL:-http://localhost:8080/api/auth/apple/callback}
+      APPLE_CALLBACK_URL: ${APPLE_CALLBACK_URL:-http://localhost:8084/api/auth/apple/callback}
       APPLE_ALLOWED_AUDIENCES: ${APPLE_ALLOWED_AUDIENCES:-}
       EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
       # App móvil: por debajo de esta versión la API responde 426 (docs/COMPATIBILIDAD.md)
@@ -299,7 +299,7 @@ services:
       - ./infra/nginx/snippets:/etc/nginx/snippets:ro
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
     ports:
-      - "${NGINX_HTTP_PORT:-8080}:80"
+      - "${NGINX_HTTP_PORT:-8084}:80"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 10s

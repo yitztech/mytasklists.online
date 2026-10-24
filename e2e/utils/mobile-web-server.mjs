@@ -41,8 +41,8 @@ if (!existsSync(join(DIST, 'index.html')) || current !== sourceHash) {
     env: {
       ...process.env,
       CI: '1',
-      EXPO_PUBLIC_API_URL: 'http://localhost:8080/api',
-      EXPO_PUBLIC_SOCKET_URL: 'http://localhost:8080',
+      EXPO_PUBLIC_API_URL: 'http://localhost:8084/api',
+      EXPO_PUBLIC_SOCKET_URL: 'http://localhost:8084',
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '',
     },
     maxBuffer: 32 * 1024 * 1024,

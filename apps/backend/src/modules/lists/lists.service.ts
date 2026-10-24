@@ -294,7 +294,7 @@ export class ListsService {
         }
         pending.lastSentAt = new Date();
         const invite = await repo.save(pending);
-        const base = this.config.get<string>('publicUrl', 'http://localhost:8080').replace(/\/$/, '');
+        const base = this.config.get<string>('publicUrl', 'http://localhost:8084').replace(/\/$/, '');
         const registrationUrl = `${base}/app/register?email=${encodeURIComponent(email)}`;
         await this.outbox.enqueue(manager, email, listInvitationTemplate(actor?.locale ?? 'es', list.name,
           actor?.fullName ?? 'MyTaskLists', registrationUrl, lifetimeHours), 'invitation', invite.id, invite.token);

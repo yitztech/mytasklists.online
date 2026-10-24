@@ -16,7 +16,7 @@ encajan las piezas.
 | `backend`   | Toda la lógica: autenticación, listas, recurrencia, tiempo real y avisos.       |
 | `postgres`  | Fuente de verdad.                                                               |
 | `redis`     | Cache de lecturas, refresh tokens, estado de sesión, tokens de un solo uso, contadores del rate limiting y pub/sub del adaptador de Socket.IO. |
-| `mailpit`   | Solo desarrollo: SMTP que captura los correos de verificación y recuperación (bandeja en `:8025`). |
+| `mailpit`   | Solo desarrollo: SMTP que captura los correos de verificación y recuperación (bandeja en `:8028`). |
 
 Los tres frontends se compilan en su propia imagen multi-stage y se sirven como estáticos
 desde un nginx mínimo; el nginx principal solo hace de proxy. Así ninguna imagen de producción

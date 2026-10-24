@@ -10,12 +10,12 @@ Cómo corre el proyecto en tu máquina, qué llega exactamente al servidor de pr
 |---|---|---|---|
 | Archivo | `docker-compose.yml` | `compose.prod.yml` | `docker-compose.yml` + `docker-compose.prod.yml` |
 | Quién compila | tu máquina (`npm run up`) | GitHub Actions → imágenes en GHCR | el propio servidor |
-| TLS y dominio | ninguno (`http://localhost:8080`) | Traefik de Coolify | nginx con tus certificados |
+| TLS y dominio | ninguno (`http://localhost:8084`) | Traefik de Coolify | nginx con tus certificados |
 | Entrada | `nginx` con `infra/nginx/conf.d` | `gateway` (imagen con la configuración dentro) | `nginx` con `infra/nginx/prod` |
 | Mailpit, Swagger, seed | sí | **no** | no |
-| Puertos en el host | 8080, 5432, 6379, 8025 (solo 127.0.0.1) | **ninguno** | 80 y 443 |
+| Puertos en el host | 8084, 5464, 6384, 8028 (solo 127.0.0.1) | **ninguno** | 80 y 443 |
 | Pruebas e2e | sí (`npm run test:e2e`; también en CI) | no | no |
-| App móvil | `apps/mobile/.env.development` → `http://localhost:8080` | `apps/mobile/.env.production` → `https://mytasklists.online` | — |
+| App móvil | `apps/mobile/.env.development` → `http://localhost:8084` | `apps/mobile/.env.production` → `https://mytasklists.online` | — |
 | Pruebas de la app móvil | solo aquí, a pedido, en simulador (`npm run mobile:test`) | no | no |
 
 Los entornos oficiales son dos: **desarrollo local** y **producción en Coolify**. La variante autoalojada se
@@ -264,9 +264,9 @@ confirma que el correo es suyo. Solo falta darlo de alta en Google.
    prueba que añadas (máximo 100), y sus sesiones caducan a los 7 días.
 5. Menú → **Credenciales → Crear credenciales → ID de cliente de OAuth → Aplicación web**.
    - **Nombre:** `MyTaskLists web`.
-   - **Orígenes autorizados de JavaScript:** `https://mytasklists.online` (y `http://localhost:8080` para desarrollo).
+   - **Orígenes autorizados de JavaScript:** `https://mytasklists.online` (y `http://localhost:8084` para desarrollo).
    - **URI de redireccionamiento autorizados:** `https://mytasklists.online/api/auth/google/callback` y
-     `http://localhost:8080/api/auth/google/callback`. Deben coincidir **exactamente** (protocolo, dominio, ruta y sin `/` final).
+     `http://localhost:8084/api/auth/google/callback`. Deben coincidir **exactamente** (protocolo, dominio, ruta y sin `/` final).
 6. Copia el **ID de cliente** y el **secreto de cliente**.
 
 ### 7.2 Variables
@@ -274,7 +274,7 @@ confirma que el correo es suyo. Solo falta darlo de alta en Google.
 | Dónde | Variables |
 |---|---|
 | Producción (Coolify → variables de la app, o la ficha de Ansible) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. `GOOGLE_CALLBACK_URL` se deriva de `SITE_URL` en `compose.prod.yml` |
-| Desarrollo (`.env`) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL=http://localhost:8080/api/auth/google/callback` |
+| Desarrollo (`.env`) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALLBACK_URL=http://localhost:8084/api/auth/google/callback` |
 
 Tras cambiar variables en Coolify, redespliega. Comprobación:
 
