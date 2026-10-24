@@ -100,8 +100,9 @@ export function checkContract(base = 'origin/main') {
     const lineOwner = new Map();
 
     for (const [name, arity] of oldTypes) {
-      // Se compara como PublishedLocale (abajo): es la forma que viaja en `User.locale`.
-      if (name === 'EnabledLocale') continue;
+      // Se comparan como PublishedLocale (abajo): es la forma que viaja en `User.locale`.
+      // Además viven en `./locales`, que no se reexporta desde index.
+      if (name === 'EnabledLocale' || name === 'LegacyLocale') continue;
       if (!newTypes.has(name)) {
         breaking.push({ name, reason: 'se eliminó del contrato' });
         continue;
