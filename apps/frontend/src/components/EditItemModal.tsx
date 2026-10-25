@@ -6,14 +6,18 @@ import { itemsApi } from '../api/endpoints';
 import type { Item } from '../types';
 import { prepareItemImage } from '../utils/item-image';
 import { localizedUnits } from '../utils/units';
+import { AISLE_OPTIONS, DEFAULT_AISLE } from '../utils/aisles';
 
-export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item; onClose: () => void; onSaved: () => void; onError: (message: string) => void }) {
+export function EditItemModal({ item, isAdvanced, onClose, onSaved, onError }: { item: Item; isAdvanced?: boolean; onClose: () => void; onSaved: () => void; onError: (message: string) => void }) {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note ?? '');
   const [quantity, setQuantity] = useState(String(item.quantity));
   const [unit, setUnit] = useState(UNITS.some((u) => u.value === item.unit) ? item.unit : 'custom');
   const [customUnit, setCustomUnit] = useState(UNITS.some((u) => u.value === item.unit) ? '' : item.unit);
+  const [category, setCategory] = useState<string>(item.category || DEFAULT_AISLE);
+  const [estimatedPrice, setEstimatedPrice] = useState(item.estimatedPrice !== null && item.estimatedPrice !== undefined ? String(item.estimatedPrice) : '');
+  const [storeName, setStoreName] = useState(item.storeName ?? '');
   const [recurring, setRecurring] = useState(item.isRecurring);
   const [days, setDays] = useState(String(item.recurrenceDays ?? 14));
   const [file, setFile] = useState<File | null>(null);
@@ -49,9 +53,21 @@ export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item;
     if (!name.trim() || /[\x00-\x1F\x7F]/.test(name.trim()) || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selectedUnit || selectedUnit.length > 20) {
       onError(t('editItem.invalid')); return;
     }
+    const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
+    if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0 || parsedPrice > 999999.99)) {
+      onError(t('editItem.invalid')); return;
+    }
     setSaving(true);
     try {
-      await itemsApi.update(item.id, { name: name.trim(), note: note.trim() || null, quantity: amount, unit: selectedUnit, isRecurring: recurring, ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}) });
+      await itemsApi.update(item.id, {
+        name: name.trim(),
+        note: note.trim() || null,
+        quantity: amount,
+        unit: selectedUnit,
+        ...(isAdvanced ? { category, estimatedPrice: parsedPrice, storeName: storeName.trim() || null } : {}),
+        isRecurring: recurring,
+        ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}),
+      });
       if (file) {
         const body = new FormData(); body.append('file', await prepareItemImage(file));
         await itemsApi.uploadImage(item.id, body);
@@ -69,6 +85,24 @@ export function EditItemModal({ item, onClose, onSaved, onError }: { item: Item;
         <div><label className="form-label" htmlFor="edit-item-note">{t('editItem.note')}</label><textarea id="edit-item-note" className="form-control" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={2} /></div>
         <div className="row g-2"><div className="col-5"><label className="form-label" htmlFor="edit-item-quantity">{t('editItem.quantity')}</label><input id="edit-item-quantity" className="form-control" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div><div className="col"><label className="form-label" htmlFor="edit-item-unit">{t('editItem.unit')}</label><select id="edit-item-unit" className="form-select" value={unit} onChange={(e) => setUnit(e.target.value)}>{localizedUnits(i18n.language).map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}<option value="custom">{t('editItem.custom')}</option></select></div></div>
         {unit === 'custom' && <div><label className="form-label" htmlFor="edit-custom-unit">{t('editItem.unitName')}</label><input id="edit-custom-unit" className="form-control" value={customUnit} onChange={(e) => setCustomUnit(e.target.value)} maxLength={20} required /></div>}
+        {isAdvanced && (
+          <div className="row g-2">
+            <div className="col-6">
+              <label className="form-label" htmlFor="edit-item-price">{t('advancedList.estimatedPriceLabel')}</label>
+              <input id="edit-item-price" className="form-control" inputMode="decimal" value={estimatedPrice} onChange={(e) => setEstimatedPrice(e.target.value)} placeholder={t('advancedList.estimatedPricePlaceholder')} />
+            </div>
+            <div className="col-6">
+              <label className="form-label" htmlFor="edit-item-aisle">{t('advancedList.aisleLabel')}</label>
+              <select id="edit-item-aisle" className="form-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+                {AISLE_OPTIONS.map((aisle) => <option key={aisle.value} value={aisle.value}>{t(aisle.labelKey)}</option>)}
+              </select>
+            </div>
+            <div className="col-12">
+              <label className="form-label" htmlFor="edit-item-store">{t('advancedList.storeLabel')}</label>
+              <input id="edit-item-store" className="form-control" maxLength={80} value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder={t('advancedList.storePlaceholder')} />
+            </div>
+          </div>
+        )}
         <div className="form-check form-switch"><input className="form-check-input" id="edit-item-recurring" type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} /><label className="form-check-label" htmlFor="edit-item-recurring">{t('addItem.repeat')}</label></div>
         {recurring && <div><label className="form-label" htmlFor="edit-item-days">{t('editItem.repeatEvery')}</label><input id="edit-item-days" className="form-control" type="number" min="1" max="365" value={days} onChange={(e) => setDays(e.target.value)} /></div>}
         <div><label className="form-label" htmlFor="edit-item-image">{t('editItem.image')}</label><input ref={fileRef} id="edit-item-image" className="form-control" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setRemoveImage(false); }} />{(file || (imageUrl && !removeImage)) && <div className="d-flex align-items-center gap-3 mt-2"><img src={previewUrl ?? imageUrl!} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} /><button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => { setFile(null); setRemoveImage(true); if (fileRef.current) fileRef.current.value = ''; }}>{t('editItem.removeImage')}</button></div>}</div>

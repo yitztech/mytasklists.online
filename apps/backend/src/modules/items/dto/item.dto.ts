@@ -1,4 +1,12 @@
-import type { CreateItemRequest, ReorderItemsRequest, UpdateItemRequest } from '@lista/contracts';
+import type {
+  CreateItemRequest,
+  ReceiptApplyMatchInput,
+  ReceiptApplyRequest,
+  ReceiptScanRequest,
+  ReorderItemsRequest,
+  SmartEntryRequest,
+  UpdateItemRequest,
+} from '@lista/contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 import {
@@ -13,6 +21,7 @@ import {
   Max,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateItemDto implements CreateItemRequest {
@@ -63,6 +72,31 @@ export class CreateItemDto implements CreateItemRequest {
   @Min(1, { message: 'La recurrencia mínima es de 1 día' })
   @Max(365, { message: 'La recurrencia máxima es de 365 días' })
   recurrenceDays?: number;
+
+  @ApiPropertyOptional({ example: 35.5 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
+  estimatedPrice?: number | null;
+
+  @ApiPropertyOptional({ example: 35.5 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
+  lastPaidPrice?: number | null;
+
+  @ApiPropertyOptional({ example: 'Costco' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsString()
+  @Length(0, 80)
+  storeName?: string | null;
 }
 
 export class UpdateItemDto implements UpdateItemRequest {
@@ -111,6 +145,31 @@ export class UpdateItemDto implements UpdateItemRequest {
   @Min(1)
   @Max(365)
   recurrenceDays?: number | null;
+
+  @ApiPropertyOptional({ example: 35.5 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
+  estimatedPrice?: number | null;
+
+  @ApiPropertyOptional({ example: 35.5 })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
+  lastPaidPrice?: number | null;
+
+  @ApiPropertyOptional({ example: 'Walmart' })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsString()
+  @Length(0, 80)
+  storeName?: string | null;
 }
 
 export class ReorderItemsDto implements ReorderItemsRequest {
@@ -118,4 +177,55 @@ export class ReorderItemsDto implements ReorderItemsRequest {
   @IsArray()
   @IsUUID('4', { each: true })
   itemIds: string[];
+}
+
+export class SmartEntryDto implements SmartEntryRequest {
+  @ApiProperty({ example: '2 kg de tomate a $35, 1 leche y jabón cada 15 días' })
+  @IsString()
+  @Length(1, 2000)
+  text: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  autoCreate?: boolean;
+}
+
+export class ReceiptScanDto implements ReceiptScanRequest {
+  @ApiProperty({ example: 'LECHE DESLACTOSADA 1L 28.50\nTOMATE SALADET 2KG 35.00' })
+  @IsString()
+  @Length(1, 8000)
+  receiptText: string;
+}
+
+export class ReceiptApplyMatchDto implements ReceiptApplyMatchInput {
+  @ApiProperty()
+  @IsUUID('4')
+  itemId: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999999.99)
+  paidPrice?: number | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  suggestedRecurrenceDays?: number | null;
+}
+
+export class ReceiptApplyDto implements ReceiptApplyRequest {
+  @ApiProperty({ type: [ReceiptApplyMatchDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReceiptApplyMatchDto)
+  matches: ReceiptApplyMatchDto[];
 }

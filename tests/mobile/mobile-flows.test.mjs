@@ -218,4 +218,43 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
     }
   });
 
+  describe('Móvil: Listas Normales vs. Avanzadas (Presupuesto, Pasillos, Entrada Inteligente y OCR)', () => {
+    const mobileSrcDir = fileURLToPath(new URL('../../apps/mobile/src/', import.meta.url));
+
+    it('ListsScreen.tsx incluye selector Normal vs. Avanzada y campo de presupuesto objetivo', () => {
+      const listsSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListsScreen.tsx'), 'utf8');
+      assert.match(listsSource, /testID="list-type-normal"/, 'Debe incluir botón para lista normal');
+      assert.match(listsSource, /testID="list-type-advanced"/, 'Debe incluir botón para lista avanzada');
+      assert.match(listsSource, /testID="new-list-budget"/, 'Debe incluir campo de presupuesto para lista avanzada');
+    });
+
+    it('ListDetailScreen.tsx incluye panel avanzado, switch de pasillos, dictado/texto libre y escáner OCR', () => {
+      const detailSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListDetailScreen.tsx'), 'utf8');
+      assert.match(detailSource, /testID="advanced-list-panel"/, 'Debe mostrar panel de lista avanzada');
+      assert.match(detailSource, /testID="aisle-sort-switch"/, 'Debe permitir activar/desactivar agrupación por pasillos');
+      assert.match(detailSource, /testID="smart-entry-input"/, 'Debe incluir entrada rápida por voz/texto libre');
+      assert.match(detailSource, /testID="receipt-ocr-input"/, 'Debe incluir conciliación de ticket OCR');
+      assert.match(detailSource, /testID="item-estimated-price-input"/, 'Debe permitir capturar precio estimado al agregar producto');
+    });
+
+    it('ItemRow.tsx, PurchasedRow.tsx y EditItemModal.tsx soportan precios en listas avanzadas', () => {
+      const itemRowSource = fs.readFileSync(path.join(mobileSrcDir, 'components/ItemRow.tsx'), 'utf8');
+      const purchasedRowSource = fs.readFileSync(path.join(mobileSrcDir, 'components/PurchasedRow.tsx'), 'utf8');
+      const editModalSource = fs.readFileSync(path.join(mobileSrcDir, 'components/EditItemModal.tsx'), 'utf8');
+
+      assert.match(itemRowSource, /showPrice/, 'ItemRow debe soportar showPrice');
+      assert.match(purchasedRowSource, /showPrice/, 'PurchasedRow debe soportar showPrice');
+      assert.match(editModalSource, /testID="edit-item-estimated-price"/, 'EditItemModal debe permitir editar precio estimado');
+    });
+
+    it('LanguageSwitcher.tsx muestra banderas de países con formato compacto sin margen excesivo a la derecha', () => {
+      const switcherSource = fs.readFileSync(path.join(mobileSrcDir, 'components/LanguageSwitcher.tsx'), 'utf8');
+      const i18nSource = fs.readFileSync(path.join(mobileSrcDir, 'i18n/index.ts'), 'utf8');
+
+      assert.match(i18nSource, /LANGUAGE_FLAGS/, 'i18n/index.ts debe definir las banderas por idioma');
+      assert.match(switcherSource, /LANGUAGE_FLAGS\[language\]/, 'LanguageSwitcher debe mostrar la bandera junto al nombre del idioma');
+      assert.match(switcherSource, /✓/, 'LanguageSwitcher debe mostrar marca de selección en el idioma activo');
+    });
+  });
+
 });

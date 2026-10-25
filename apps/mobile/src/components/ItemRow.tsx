@@ -5,6 +5,7 @@ import { Badge } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { formatItemTotal } from '../utils/aisles';
 import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
 
@@ -18,13 +19,14 @@ interface Props {
   onEdit: (item: Item) => void;
   /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
   showDates?: boolean;
+  showPrice?: boolean;
 }
 
 /**
  * Producto pendiente. El estado se lee en el aro del check y en la etiqueta:
  * gris (una sola vez), etiqueta amarilla (recurrente al día) y rojo (vencido).
  */
-export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit, showDates }: Props) {
+export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit, showDates, showPrice }: Props) {
   const { t, i18n } = useTranslation();
 
   return (
@@ -52,6 +54,9 @@ export function ItemRow({ item, onPurchase, onLongPress, disabled, first, onEdit
           <Text style={styles.meta}>
             {item.quantity} {unitLabel(item.unit, i18n.language)}
           </Text>
+          {showPrice && (item.estimatedPrice !== null && item.estimatedPrice !== undefined || item.lastPaidPrice !== null && item.lastPaidPrice !== undefined) && (
+            <Badge tone="success" text={formatItemTotal(item)} />
+          )}
           {item.isRecurring && (
             <Badge
               testID="item-recurrence-badge"

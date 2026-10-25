@@ -4,9 +4,12 @@ import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
+import { getAisleLabelKey } from '../utils/aisles';
 
 interface Props {
   item: Item;
+  isAdvanced?: boolean;
+  currency?: string;
   disabled?: boolean;
   /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
   showDates?: boolean;
@@ -27,9 +30,12 @@ const formatQuantity = (item: Item, language: string): string =>
  *  · azul  → recurrente dentro de su plazo
  *  · rojo  → recurrente vencido (pasó su plazo sin comprarse)
  */
-export function PendingItem({ item, disabled, showDates, onPurchase, onDelete, onAdvanceClock, onEdit }: Props) {
+export function PendingItem({ item, isAdvanced, currency, disabled, showDates, onPurchase, onDelete, onAdvanceClock, onEdit }: Props) {
   const { t, i18n } = useTranslation();
   const [busy, setBusy] = useState(false);
+  const unitPrice = item.estimatedPrice ?? item.lastPaidPrice ?? null;
+  const lineTotal = unitPrice !== null ? (item.quantity * unitPrice).toFixed(2) : null;
+  const aisleLabelKey = isAdvanced ? getAisleLabelKey(item.category) : null;
 
   const stateClass = item.isOverdue
     ? 'lc-item--vencido'
@@ -72,6 +78,25 @@ export function PendingItem({ item, disabled, showDates, onPurchase, onDelete, o
           <span className="lc-chip" data-testid="item-quantity">
             {formatQuantity(item,i18n.language)}
           </span>
+
+          {aisleLabelKey && (
+            <span className="lc-chip" data-testid="item-aisle-badge">
+              {t(aisleLabelKey)}
+            </span>
+          )}
+
+          {isAdvanced && lineTotal !== null && (
+            <span className="lc-chip lc-chip--done" data-testid="item-price-badge">
+              ${lineTotal} {currency}
+            </span>
+          )}
+
+          {isAdvanced && item.storeName && (
+            <span className="lc-chip" data-testid="item-store-badge">
+              <i className="bi bi-shop me-1" aria-hidden="true" />
+              {item.storeName}
+            </span>
+          )}
 
           {item.isRecurring && (
             <span

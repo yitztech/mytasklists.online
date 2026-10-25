@@ -1,5 +1,10 @@
 import { BillingService } from '../billing/billing.service';
-import type { ServerEvents } from '@lista/contracts';
+import type {
+  ReceiptApplyResponse,
+  ReceiptScanResponse,
+  ServerEvents,
+  SmartEntryResponse,
+} from '@lista/contracts';
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, HttpException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
@@ -7,6 +12,7 @@ import {
   ActivityLog,
   ItemStatus,
   ListItem,
+  ListType,
   NotificationType,
   ShoppingList,
   User,
@@ -16,8 +22,16 @@ import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { RT } from '../realtime/realtime.events';
 import { NotificationsService } from '../notifications/notifications.service';
 import { addDays, isInList, itemNameKey, ItemView, toItemView } from './item.mapper';
-import { CreateItemDto, ReorderItemsDto, UpdateItemDto } from './dto/item.dto';
+import {
+  CreateItemDto,
+  ReceiptApplyDto,
+  ReceiptScanDto,
+  ReorderItemsDto,
+  SmartEntryDto,
+  UpdateItemDto,
+} from './dto/item.dto';
 import { ItemImageStorage } from './item-image.storage';
+import { classifyAisle, parseSmartEntryText, scanReceiptText } from './smart-tools';
 
 /** Eventos que avisan de un cambio dentro de una lista */
 type ListChangeEvent =
@@ -118,10 +132,15 @@ export class ItemsService {
     }
 
     const now = new Date();
+    const fallbackCategory = dto.category?.trim() || 'general';
+    const resolvedCategory =
+      list.listType === ListType.ADVANCED
+        ? classifyAisle(dto.name, dto.category)
+        : fallbackCategory;
     const item = await this.items.manager.transaction(async manager=>{
       await this.lockList(manager, listId);
       await this.assertNotDuplicate(manager, listId, dto.name);
-      await this.billing.assertCapacity(list.ownerId,'items',await manager.count(ListItem,{where:{listId}}));
+      await this.billing.assertCapacity(list.ownerId,'items',await manager.count(ListItem,{where:{listId}}),listId);
     const maxOrder = await manager.getRepository(ListItem)
       .createQueryBuilder('item')
       .select('COALESCE(MAX(item.sortOrder), 0)', 'max')
@@ -135,7 +154,10 @@ export class ItemsService {
         quantity: dto.quantity ?? 1,
         unit: dto.unit?.trim() || 'pza',
         note: dto.note?.trim() || null,
-        category: dto.category?.trim() || 'general',
+        category: resolvedCategory,
+        estimatedPrice: dto.estimatedPrice !== undefined ? dto.estimatedPrice : null,
+        lastPaidPrice: dto.lastPaidPrice !== undefined ? dto.lastPaidPrice : null,
+        storeName: dto.storeName !== undefined ? dto.storeName?.trim() || null : null,
         status: ItemStatus.PENDING,
         isRecurring,
         recurrenceDays: isRecurring ? dto.recurrenceDays! : null,
@@ -191,6 +213,9 @@ export class ItemsService {
     if (dto.unit !== undefined) item.unit = dto.unit.trim();
     if (dto.note !== undefined) item.note = dto.note?.trim() || null;
     if (dto.category !== undefined) item.category = dto.category.trim();
+    if (dto.estimatedPrice !== undefined) item.estimatedPrice = dto.estimatedPrice;
+    if (dto.lastPaidPrice !== undefined) item.lastPaidPrice = dto.lastPaidPrice;
+    if (dto.storeName !== undefined) item.storeName = dto.storeName?.trim() || null;
 
     // Cambiar la recurrencia recalcula la fecha límite del ciclo en curso
     if (dto.isRecurring !== undefined || dto.recurrenceDays !== undefined) {
@@ -222,6 +247,9 @@ export class ItemsService {
       ...(dto.unit !== undefined ? { unit: item.unit } : {}),
       ...(dto.note !== undefined ? { note: item.note } : {}),
       ...(dto.category !== undefined ? { category: item.category } : {}),
+      ...(dto.estimatedPrice !== undefined ? { estimatedPrice: item.estimatedPrice } : {}),
+      ...(dto.lastPaidPrice !== undefined ? { lastPaidPrice: item.lastPaidPrice } : {}),
+      ...(dto.storeName !== undefined ? { storeName: item.storeName } : {}),
       ...(dto.isRecurring !== undefined || dto.recurrenceDays !== undefined ? {
         isRecurring: item.isRecurring, recurrenceDays: item.recurrenceDays,
         overdueNotifiedAt: item.overdueNotifiedAt, dueAt: item.dueAt, nextActivationAt: item.nextActivationAt,
@@ -494,5 +522,124 @@ export class ItemsService {
     return items
       .filter((item) => status !== undefined || item.status !== ItemStatus.ARCHIVED)
       .map((item) => toItemView(item, now));
+  }
+
+  // ── Herramientas de Listas Avanzadas (Entrada Inteligente y OCR de Tickets) ──
+  async smartEntry(listId: string, userId: string, dto: SmartEntryDto): Promise<SmartEntryResponse> {
+    await this.listsService.assertMember(listId, userId, true);
+    const list = await this.listsService.getListOrFail(listId);
+    if (list.listType !== ListType.ADVANCED) {
+      throw new BadRequestException('Esta herramienta solo está disponible en listas avanzadas.');
+    }
+
+    const parsed = parseSmartEntryText(dto.text);
+    const created: ItemView[] = [];
+
+    if (dto.autoCreate !== false && parsed.length > 0) {
+      for (const entry of parsed) {
+        try {
+          const item = await this.create(listId, userId, {
+            name: entry.name,
+            quantity: entry.quantity,
+            unit: entry.unit,
+            category: entry.category,
+            estimatedPrice: entry.estimatedPrice,
+            isRecurring: entry.isRecurring,
+            ...(entry.isRecurring && entry.recurrenceDays ? { recurrenceDays: entry.recurrenceDays } : {}),
+          });
+          created.push(item);
+        } catch (err) {
+          // Si alguno ya existe en la lista (ITEM_DUPLICATE), continúa con los demás
+          if (!(err instanceof ConflictException)) throw err;
+        }
+      }
+    }
+
+    return { parsed, created };
+  }
+
+  async scanReceipt(listId: string, userId: string, dto: ReceiptScanDto): Promise<ReceiptScanResponse> {
+    await this.listsService.assertMember(listId, userId, true);
+    const list = await this.listsService.getListOrFail(listId);
+    if (list.listType !== ListType.ADVANCED) {
+      throw new BadRequestException('Esta herramienta solo está disponible en listas avanzadas.');
+    }
+
+    const items = await this.items.find({
+      where: { listId },
+      order: { sortOrder: 'ASC', createdAt: 'ASC' },
+    });
+
+    return scanReceiptText(dto.receiptText, items);
+  }
+
+  async applyReceipt(listId: string, userId: string, dto: ReceiptApplyDto): Promise<ReceiptApplyResponse> {
+    await this.listsService.assertMember(listId, userId, true);
+    const list = await this.listsService.getListOrFail(listId);
+    if (list.listType !== ListType.ADVANCED) {
+      throw new BadRequestException('Esta herramienta solo está disponible en listas avanzadas.');
+    }
+
+    const now = new Date();
+    let purchasedCount = 0;
+    let recurrenceAdjustedCount = 0;
+    const updatedViews: ItemView[] = [];
+
+    for (const match of dto.matches) {
+      const item = await this.items.findOne({ where: { id: match.itemId, listId } });
+      if (!item) continue;
+
+      const nextRecurring =
+        match.suggestedRecurrenceDays !== undefined && match.suggestedRecurrenceDays !== null
+          ? true
+          : item.isRecurring;
+      const nextDays =
+        match.suggestedRecurrenceDays !== undefined && match.suggestedRecurrenceDays !== null
+          ? match.suggestedRecurrenceDays
+          : item.recurrenceDays;
+
+      if (nextDays && nextDays !== item.recurrenceDays) {
+        recurrenceAdjustedCount++;
+      }
+
+      const paidPrice =
+        match.paidPrice !== undefined && match.paidPrice !== null ? match.paidPrice : item.lastPaidPrice;
+      const estimatedPrice =
+        match.paidPrice !== undefined && match.paidPrice !== null ? match.paidPrice : item.estimatedPrice;
+
+      await this.items.update(item.id, {
+        status: ItemStatus.PURCHASED,
+        purchasedAt: now,
+        lastPurchasedAt: now,
+        purchasedById: userId,
+        overdueNotifiedAt: null,
+        isRecurring: nextRecurring,
+        recurrenceDays: nextRecurring ? nextDays : null,
+        nextActivationAt: nextRecurring && nextDays ? addDays(now, nextDays) : null,
+        lastPaidPrice: paidPrice,
+        estimatedPrice,
+        cycleCount: item.cycleCount + 1,
+        editedAt: now,
+      });
+
+      purchasedCount++;
+      updatedViews.push(toItemView(await this.loadItem(item.id), now));
+    }
+
+    if (purchasedCount > 0) {
+      await this.afterChange(listId, RT.LIST_UPDATED, { actorId: userId });
+      await this.log({
+        listId,
+        userId,
+        action: 'list.receipt_applied',
+        summary: `${purchasedCount} comprados · ${recurrenceAdjustedCount} ajustados`,
+      });
+    }
+
+    return {
+      purchasedCount,
+      recurrenceAdjustedCount,
+      items: updatedViews,
+    };
   }
 }

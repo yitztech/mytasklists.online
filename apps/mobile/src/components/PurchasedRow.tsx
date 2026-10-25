@@ -5,6 +5,7 @@ import { Badge, CheckGlyph, CrossGlyph } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
+import { formatItemTotal } from '../utils/aisles';
 import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
 
@@ -17,10 +18,11 @@ interface Props {
   onEdit: (item: Item) => void;
   /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
   showDates?: boolean;
+  showPrice?: boolean;
 }
 
 /** Producto comprado: se muestra tachado y se quita con la "x" */
-export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit, showDates }: Props) {
+export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit, showDates, showPrice }: Props) {
   const { t, i18n } = useTranslation();
   const localizedUnit = unitLabel(item.unit, i18n.language);
   return (
@@ -42,6 +44,9 @@ export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit
         </Text>
         <View style={styles.metaRow}>
           {(Number(item.quantity)!==1||item.unit!=='pza')&&<Text style={styles.meta} testID="purchased-quantity">{Number(item.quantity)} {localizedUnit}</Text>}
+          {showPrice && (item.lastPaidPrice !== null && item.lastPaidPrice !== undefined || item.estimatedPrice !== null && item.estimatedPrice !== undefined) && (
+            <Badge tone="muted" text={formatItemTotal(item)} />
+          )}
           {item.purchasedByName ? <Text style={styles.meta}>{item.purchasedByName}</Text> : null}
           {item.isRecurring && item.daysUntilReactivation !== null && (
             <Badge

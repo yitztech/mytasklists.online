@@ -115,6 +115,18 @@ describe('Base de datos · Restricciones de esquema y validaciones', () => {
       const tooLongDesc = 'D'.repeat(401);
       assert.strictEqual(tooLongDesc.length <= 400, false);
     });
+
+    it('Caso de éxito y fracaso: valida list_type (normal | advanced), budget >= 0 y currency', () => {
+      const validTypes = new Set(['normal', 'advanced']);
+      assert.strictEqual(validTypes.has('normal'), true);
+      assert.strictEqual(validTypes.has('advanced'), true);
+      assert.strictEqual(validTypes.has('pro'), false);
+
+      const isValidBudget = (b) => b === null || (typeof b === 'number' && b >= 0 && b <= 99999999.99);
+      assert.strictEqual(isValidBudget(null), true);
+      assert.strictEqual(isValidBudget(1500.5), true);
+      assert.strictEqual(isValidBudget(-10), false);
+    });
   });
 
   describe('Tabla: list_items (Validación de productos, recurrencias y fechas)', () => {

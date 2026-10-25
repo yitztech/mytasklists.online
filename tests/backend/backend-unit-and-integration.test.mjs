@@ -7,7 +7,17 @@ import { RegisterDto, LoginDto } from '../../apps/backend/dist/modules/auth/dto/
 import { CompleteRegistrationDto } from '../../apps/backend/dist/modules/auth/dto/registration.dto.js';
 import { UpdateProfileDto, ChangePasswordDto } from '../../apps/backend/dist/modules/users/dto/update-profile.dto.js';
 import { CreateListDto, UpdateListDto } from '../../apps/backend/dist/modules/lists/dto/list.dto.js';
-import { CreateItemDto, UpdateItemDto } from '../../apps/backend/dist/modules/items/dto/item.dto.js';
+import {
+  CreateItemDto,
+  UpdateItemDto,
+  SmartEntryDto,
+  ReceiptScanDto,
+} from '../../apps/backend/dist/modules/items/dto/item.dto.js';
+import {
+  classifyAisle,
+  parseSmartEntryText,
+  scanReceiptText,
+} from '../../apps/backend/dist/modules/items/smart-tools.js';
 
 /**
  * Pruebas unitarias y de integración del Backend (NestJS / Class-Validator)
@@ -295,6 +305,90 @@ describe('Servicio Backend · Validaciones, Listas, Recurrencias y Cancelaciones
       assert.strictEqual(item.isRecurring, false);
       assert.strictEqual(item.recurrenceDays, null);
       assert.strictEqual(item.nextActivationAt, null);
+    });
+  });
+
+  describe('Listas Normales vs. Avanzadas (Pilar Financiero, Hogar, Entrada Inteligente Local y OCR)', () => {
+    it('Caso de éxito y fracaso: CreateListDto valida listType (normal | advanced), budget y currency', async () => {
+      const normalDto = plainToInstance(CreateListDto, {
+        name: 'Lista Normal Semanal',
+        listType: 'normal',
+      });
+      assert.strictEqual((await validate(normalDto)).length, 0);
+
+      const advancedDto = plainToInstance(CreateListDto, {
+        name: 'Súper Quincenal Hogar',
+        listType: 'advanced',
+        budget: 1850.5,
+        currency: 'MXN',
+        autoSortAisles: true,
+      });
+      assert.strictEqual((await validate(advancedDto)).length, 0);
+
+      const invalidTypeDto = plainToInstance(CreateListDto, {
+        name: 'Lista Inválida',
+        listType: 'enterprise',
+        budget: -50,
+      });
+      const invalidErrors = await validate(invalidTypeDto);
+      const props = invalidErrors.map((e) => e.property);
+      assert.ok(props.includes('listType'));
+      assert.ok(props.includes('budget'));
+    });
+
+    it('Clasificador determinista local de pasillos (classifyAisle) sin IA externa', () => {
+      assert.strictEqual(classifyAisle('Tomate saladet'), 'produce');
+      assert.strictEqual(classifyAisle('Leche deslactosada'), 'dairy');
+      assert.strictEqual(classifyAisle('Pechuga de pollo'), 'meat');
+      assert.strictEqual(classifyAisle('Jabón líquido para ropa'), 'cleaning');
+      assert.strictEqual(classifyAisle('Croquetas para perro'), 'pets');
+    });
+
+    it('Parser determinista local de Entrada Inteligente (parseSmartEntryText) extrae cantidad, unidad, precio, recurrencia y pasillo', async () => {
+      const smartDto = plainToInstance(SmartEntryDto, {
+        text: '2 kg de tomate a $35, 1 l de leche en $28.50 y jabón cada 15 días',
+        createItems: true,
+      });
+      assert.strictEqual((await validate(smartDto)).length, 0);
+
+      const parsed = parseSmartEntryText(smartDto.text);
+      assert.strictEqual(parsed.length, 3);
+
+      assert.strictEqual(parsed[0].name, 'Tomate');
+      assert.strictEqual(parsed[0].quantity, 2);
+      assert.strictEqual(parsed[0].unit, 'kg');
+      assert.strictEqual(parsed[0].estimatedPrice, 35);
+      assert.strictEqual(parsed[0].category, 'produce');
+
+      assert.strictEqual(parsed[1].name, 'Leche');
+      assert.strictEqual(parsed[1].quantity, 1);
+      assert.strictEqual(parsed[1].unit, 'l');
+      assert.strictEqual(parsed[1].estimatedPrice, 28.5);
+      assert.strictEqual(parsed[1].category, 'dairy');
+
+      assert.strictEqual(parsed[2].name, 'Jabón');
+      assert.strictEqual(parsed[2].isRecurring, true);
+      assert.strictEqual(parsed[2].recurrenceDays, 15);
+      assert.strictEqual(parsed[2].category, 'cleaning');
+    });
+
+    it('Conciliador local de tickets OCR (scanReceiptText) empareja productos, extrae precios reales e ignora totales', async () => {
+      const scanDto = plainToInstance(ReceiptScanDto, {
+        receiptText: 'TOMATE SALADET 2KG 70.00\nLECHE DESLACTOSADA 28.50\nSUBTOTAL 98.50\nTOTAL 98.50',
+      });
+      assert.strictEqual((await validate(scanDto)).length, 0);
+
+      const listItems = [
+        { id: 'item-1', name: 'Tomate saladet', status: 'pending' },
+        { id: 'item-2', name: 'Leche deslactosada', status: 'pending' },
+      ];
+      const result = scanReceiptText(scanDto.receiptText, listItems);
+      assert.strictEqual(result.lines.length, 2, 'Debe ignorar SUBTOTAL y TOTAL');
+      assert.strictEqual(result.detectedTotal, 98.5);
+      assert.strictEqual(result.lines[0].matchedItemId, 'item-1');
+      assert.strictEqual(result.lines[0].price, 70);
+      assert.strictEqual(result.lines[1].matchedItemId, 'item-2');
+      assert.strictEqual(result.lines[1].price, 28.5);
     });
   });
 

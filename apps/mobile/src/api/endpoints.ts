@@ -1,12 +1,17 @@
 import type { DeleteAccountRequest, UpdateProfileRequest } from '@lista/contracts';
 import { api } from './client';
 import type {
+  AisleCategory,
   AppCompatibility,
   AuthResponse,
   Item,
   ListDetail,
   ListSummary,
+  ListType,
   LoginResponse,
+  ReceiptApplyResponse,
+  ReceiptScanResponse,
+  SmartEntryResponse,
   User,
 } from '../types';
 
@@ -50,7 +55,26 @@ export const listsApi = {
   revokeInvitation: (id: string, invitationId: string) => api.delete<{ok:true}>(`/lists/${id}/invitations/${invitationId}`),
   all: () => api.get<ListSummary[]>('/lists'),
   detail: (id: string) => api.get<ListDetail>(`/lists/${id}`),
-  create: (name: string) => api.post<ListDetail>('/lists', { name }),
+  create: (
+    nameOrPayload:
+      | string
+      | { name: string; listType?: ListType; budget?: number | null; currency?: string; autoSortAisles?: boolean },
+  ) => {
+    if (typeof nameOrPayload === 'string') {
+      return api.post<ListDetail>('/lists', { name: nameOrPayload });
+    }
+    return api.post<ListDetail>('/lists', nameOrPayload);
+  },
+  update: (
+    id: string,
+    payload: {
+      name?: string;
+      listType?: ListType;
+      budget?: number | null;
+      currency?: string;
+      autoSortAisles?: boolean;
+    },
+  ) => api.patch<ListDetail>(`/lists/${id}`, payload),
   remove: (id: string) => api.delete<{ ok: boolean }>(`/lists/${id}`),
   share: (id: string, email: string) => api.post<ListDetail & { invitationSent?: boolean; invitationEmail?: string }>(`/lists/${id}/share`, { email }),
   setMyNotifications: (id: string, notifyOnChange: boolean) =>
@@ -60,8 +84,30 @@ export const listsApi = {
 export const itemsApi = {
   create: (
     listId: string,
-    payload: { name: string; quantity?: number; unit?: string; isRecurring?: boolean; recurrenceDays?: number },
+    payload: {
+      name: string;
+      quantity?: number;
+      unit?: string;
+      isRecurring?: boolean;
+      recurrenceDays?: number;
+      estimatedPrice?: number | null;
+      lastPaidPrice?: number | null;
+      storeName?: string | null;
+      category?: AisleCategory | string;
+    },
   ) => api.post<Item>(`/lists/${listId}/items`, payload),
+  smartEntry: (listId: string, payload: { text: string; createItems?: boolean }) =>
+    api.post<SmartEntryResponse>(`/lists/${listId}/items/smart-entry`, payload),
+  scanReceipt: (listId: string, payload: { receiptText: string; storeName?: string }) =>
+    api.post<ReceiptScanResponse>(`/lists/${listId}/receipts/scan`, payload),
+  applyReceipt: (
+    listId: string,
+    payload: {
+      receiptText?: string;
+      storeName?: string;
+      matches?: Array<{ itemId: string; unitPrice?: number | null; quantity?: number }>;
+    },
+  ) => api.post<ReceiptApplyResponse>(`/lists/${listId}/receipts/apply`, payload),
   update: (itemId: string, payload: Record<string, unknown>) => api.patch<Item>(`/items/${itemId}`, payload),
   uploadImage: (itemId: string, image: FormData) => api.post<Item>(`/items/${itemId}/image`, image),
   removeImage: (itemId: string) => api.delete<Item>(`/items/${itemId}/image`),

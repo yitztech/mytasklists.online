@@ -12,19 +12,31 @@ import type { Item } from '../types';
 import { itemImageForm } from '../utils/item-image';
 import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 
-export function EditItemModal({ item, onClose, onSaved }: { item: Item | null; onClose: () => void; onSaved: () => void }) {
+export function EditItemModal({
+  item,
+  isAdvanced,
+  onClose,
+  onSaved,
+}: {
+  item: Item | null;
+  isAdvanced?: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState(item?.name ?? ''); const [note, setNote] = useState(item?.note ?? ''); const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
+  const [estimatedPrice, setEstimatedPrice] = useState(item?.estimatedPrice !== null && item?.estimatedPrice !== undefined ? String(item.estimatedPrice) : '');
   const known = UNITS.some((u) => u.value === item?.unit); const [unit, setUnit] = useState(known ? item?.unit ?? 'pza' : CUSTOM_UNIT);
   const [customUnit, setCustomUnit] = useState(known ? '' : item?.unit ?? ''); const [recurring, setRecurring] = useState(item?.isRecurring ?? false);
   const [days, setDays] = useState(String(item?.recurrenceDays ?? 14)); const [photo, setPhoto] = useState<string | null>(null); const [clearPhoto, setClearPhoto] = useState(false); const [saving, setSaving] = useState(false);
   const closePhoto = (uri: string | null) => { setPhoto(uri); setClearPhoto(uri === null); };
   const save = async () => {
     if (!item || saving) return; const amount = Number(quantity.replace(',', '.')); const selected = unit === CUSTOM_UNIT ? customUnit.trim() : unit;
-    if (!name.trim() || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selected || selected.length > 20) { Alert.alert(t('editItem.invalid')); return; }
+    const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
+    if (!name.trim() || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selected || selected.length > 20 || (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0))) { Alert.alert(t('editItem.invalid')); return; }
     setSaving(true);
     try {
-      await itemsApi.update(item.id, { name: name.trim(), note: note.trim() || null, quantity: amount, unit: selected, isRecurring: recurring, ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}) });
+      await itemsApi.update(item.id, { name: name.trim(), note: note.trim() || null, quantity: amount, unit: selected, isRecurring: recurring, ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}), ...(isAdvanced ? { estimatedPrice: parsedPrice } : {}) });
       if (photo) await itemsApi.uploadImage(item.id, await itemImageForm(photo));
       else if (clearPhoto && item.imageUrl) await itemsApi.removeImage(item.id);
       onSaved(); onClose();
@@ -36,6 +48,7 @@ export function EditItemModal({ item, onClose, onSaved }: { item: Item | null; o
     <Text style={styles.label}>{t('editItem.quantity')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.quantity')} testID="edit-item-quantity" value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" />
     <Text style={styles.label}>{t('editItem.unit')}</Text><SelectField label={t('editItem.unit')} testID="edit-item-unit" value={unit} onChange={setUnit} options={[...localizedUnits(i18n.language), { label: t('editItem.custom'), value: CUSTOM_UNIT }]} />
     {unit === CUSTOM_UNIT && <TextInput accessibilityLabel={t('editItem.unitName')} style={styles.input} testID="edit-custom-unit" value={customUnit} onChangeText={setCustomUnit} maxLength={20} />}
+    {isAdvanced && <><Text style={styles.label}>{t('advancedList.estimatedPriceLabel')}</Text><TextInput style={styles.input} accessibilityLabel={t('advancedList.estimatedPriceLabel')} testID="edit-item-estimated-price" value={estimatedPrice} onChangeText={setEstimatedPrice} keyboardType="decimal-pad" /></>}
     <View style={styles.switchRow}><Text style={styles.label}>{t('editItem.repeat')}</Text><Switch value={recurring} onValueChange={setRecurring} trackColor={{ true: colors.brand }} /></View>
     {recurring && <><Text style={styles.label}>{t('editItem.repeatEvery')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.repeatEvery')} value={days} onChangeText={setDays} keyboardType="number-pad" /></>}
     <Text style={styles.label}>{t('editItem.image')}</Text><ItemPhotoPicker uri={photo ?? (!clearPhoto && item?.imageUrl ? `${API_URL}${item.imageUrl}` : null)} onChange={closePhoto} />

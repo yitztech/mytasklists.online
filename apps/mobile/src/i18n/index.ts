@@ -12,6 +12,14 @@ import { fr } from './fr';
 export const LANGUAGES = ENABLED_LOCALES;
 export type Language = (typeof LANGUAGES)[number];
 
+export const LANGUAGE_FLAGS: Record<Language, string> = {
+  es: '🇪🇸',
+  en: '🇺🇸',
+  fr: '🇫🇷',
+  pt: '🇧🇷',
+  de: '🇩🇪',
+};
+
 const STORAGE_KEY = 'lc.mobile.lang';
 
 const isLanguage = (value: unknown): value is Language => isEnabledLocale(value);

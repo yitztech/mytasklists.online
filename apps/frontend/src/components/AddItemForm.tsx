@@ -5,9 +5,12 @@ import { itemsApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { prepareItemImage } from '../utils/item-image';
 import { localizedUnits } from '../utils/units';
+import { AISLE_OPTIONS, DEFAULT_AISLE } from '../utils/aisles';
+import type { AisleCategory } from '../types';
 
 interface Props {
   listId: string;
+  isAdvanced?: boolean;
   disabled?: boolean;
   onError: (message: string) => void;
 }
@@ -18,12 +21,15 @@ const PRESET_DAYS = [3, 7, 14, 21, 30];
  * Alta de producto. El interruptor "Repetir automáticamente" es lo que
  * convierte el producto en recurrente: al comprarlo se reprogramará solo.
  */
-export function AddItemForm({ listId, disabled, onError }: Props) {
+export function AddItemForm({ listId, isAdvanced, disabled, onError }: Props) {
   const { t, i18n } = useTranslation();
   const [customUnit,setCustomUnit] = useState('');
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<string>('pza');
+  const [category, setCategory] = useState<AisleCategory>(DEFAULT_AISLE);
+  const [estimatedPrice, setEstimatedPrice] = useState('');
+  const [storeName, setStoreName] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceDays, setRecurrenceDays] = useState('14');
   const [saving, setSaving] = useState(false);
@@ -45,12 +51,20 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
     if (!Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount*100)-amount*100)>1e-7 || !selectedUnit || selectedUnit.length>20) {
       onError(t('addItem.invalidQuantity'));return;
     }
+    const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
+    if (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0 || parsedPrice > 999999.99)) {
+      onError(t('addItem.invalidQuantity'));
+      return;
+    }
     setSaving(true);
     try {
       const created = await itemsApi.create(listId, {
         name: trimmed,
         quantity: amount,
         unit: selectedUnit,
+        ...(isAdvanced && category !== DEFAULT_AISLE ? { category } : {}),
+        ...(isAdvanced && parsedPrice !== null ? { estimatedPrice: parsedPrice } : {}),
+        ...(isAdvanced && storeName.trim() ? { storeName: storeName.trim() } : {}),
         isRecurring,
         ...(isRecurring ? { recurrenceDays: Number(recurrenceDays) || 14 } : {}),
       });
@@ -59,6 +73,9 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
       setImage(null);
       if (fileRef.current) fileRef.current.value = '';
       setQuantity('1');setUnit('pza');setCustomUnit('');
+      setCategory(DEFAULT_AISLE);
+      setEstimatedPrice('');
+      setStoreName('');
       if (selectedImage) {
         try {
           const body = new FormData();
@@ -203,6 +220,58 @@ export function AddItemForm({ listId, disabled, onError }: Props) {
               <label className="form-label" htmlFor="item-image">{t('addItem.photoOptional')}</label>
               <input ref={fileRef} id="item-image" className="form-control" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => setImage(event.target.files?.[0] ?? null)} />
             </div>
+            {isAdvanced && (
+              <>
+                <div className="col-6 col-md-4">
+                  <label className="form-label" htmlFor="item-estimated-price">
+                    {t('advancedList.estimatedPriceLabel')}
+                  </label>
+                  <input
+                    id="item-estimated-price"
+                    type="text"
+                    inputMode="decimal"
+                    className="form-control"
+                    placeholder={t('advancedList.estimatedPricePlaceholder')}
+                    value={estimatedPrice}
+                    onChange={(event) => setEstimatedPrice(event.target.value)}
+                    data-testid="item-estimated-price-input"
+                  />
+                </div>
+                <div className="col-6 col-md-4">
+                  <label className="form-label" htmlFor="item-aisle">
+                    {t('advancedList.aisleLabel')}
+                  </label>
+                  <select
+                    id="item-aisle"
+                    className="form-select"
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value as AisleCategory)}
+                    data-testid="item-aisle-select"
+                  >
+                    {AISLE_OPTIONS.map((aisle) => (
+                      <option key={aisle.value} value={aisle.value}>
+                        {t(aisle.labelKey)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-12 col-md-4">
+                  <label className="form-label" htmlFor="item-store">
+                    {t('advancedList.storeLabel')}
+                  </label>
+                  <input
+                    id="item-store"
+                    type="text"
+                    maxLength={80}
+                    className="form-control"
+                    placeholder={t('advancedList.storePlaceholder')}
+                    value={storeName}
+                    onChange={(event) => setStoreName(event.target.value)}
+                    data-testid="item-store-input"
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

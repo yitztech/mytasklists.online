@@ -2,7 +2,7 @@
  * Cuerpos que envían los clientes (cliente → servidor). Los DTO del backend los
  * implementan, así que no pueden separarse sin que falle la compilación.
  */
-import type { DevicePlatform, ListDetail, SupportedLocale, MemberRole } from './models';
+import type { DevicePlatform, ListDetail, ListType, SupportedLocale, MemberRole } from './models';
 
 // ── Autenticación ──────────────────────────────────────────────────────
 export interface RegisterRequest {
@@ -86,6 +86,10 @@ export interface CreateListRequest {
   description?: string;
   color?: string;
   icon?: string;
+  listType?: ListType;
+  budget?: number | null;
+  currency?: string;
+  autoSortAisles?: boolean;
 }
 
 export interface UpdateListRequest {
@@ -94,6 +98,10 @@ export interface UpdateListRequest {
   color?: string;
   icon?: string;
   isArchived?: boolean;
+  listType?: ListType;
+  budget?: number | null;
+  currency?: string;
+  autoSortAisles?: boolean;
 }
 
 export interface ShareListRequest {
@@ -122,6 +130,9 @@ export interface CreateItemRequest {
   category?: string;
   isRecurring?: boolean;
   recurrenceDays?: number;
+  estimatedPrice?: number | null;
+  lastPaidPrice?: number | null;
+  storeName?: string | null;
 }
 
 export interface UpdateItemRequest {
@@ -132,6 +143,28 @@ export interface UpdateItemRequest {
   category?: string;
   isRecurring?: boolean;
   recurrenceDays?: number | null;
+  estimatedPrice?: number | null;
+  lastPaidPrice?: number | null;
+  storeName?: string | null;
+}
+
+export interface SmartEntryRequest {
+  text: string;
+  autoCreate?: boolean;
+}
+
+export interface ReceiptScanRequest {
+  receiptText: string;
+}
+
+export interface ReceiptApplyMatchInput {
+  itemId: string;
+  paidPrice?: number | null;
+  suggestedRecurrenceDays?: number | null;
+}
+
+export interface ReceiptApplyRequest {
+  matches: ReceiptApplyMatchInput[];
 }
 
 export interface ReorderItemsRequest {
