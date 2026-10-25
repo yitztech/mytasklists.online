@@ -12,7 +12,8 @@ import { AddItemForm } from '../components/AddItemForm';
 import { PendingItem } from '../components/PendingItem';
 import { PurchasedItem } from '../components/PurchasedItem';
 import { ShareModal } from '../components/ShareModal';
-import type { Item, ListDetail } from '../types';
+import { formatSampleReceiptFromItems, getListCurrency, isAdvancedList } from '../utils/aisles';
+import type { Item, ListDetail, ReceiptLineMatch } from '../types';
 import { EditItemModal } from '../components/EditItemModal';
 
 export function ListDetailPage() {
@@ -28,6 +29,13 @@ export function ListDetailPage() {
   const [busy, setBusy] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [showSmartEntry, setShowSmartEntry] = useState(false);
+  const [smartText, setSmartText] = useState('');
+  const [listening, setListening] = useState(false);
+  const [showReceiptScan, setShowReceiptScan] = useState(false);
+  const [receiptText, setReceiptText] = useState('');
+  const [receiptMatches, setReceiptMatches] = useState<ReceiptLineMatch[] | null>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const reloadTimer = useRef<number | null>(null);
   const [showDates, setShowDates] = useState(() => {
     try {
@@ -177,6 +185,90 @@ export function ListDetailPage() {
       navigate('/', { replace: true });
     }, t('detail.failures.deleteList'));
 
+  const toggleAutoSortAisles = () =>
+    guard(async () => {
+      if (!list) return;
+      await listsApi.update(id, { autoSortAisles: !(list.autoSortAisles ?? true) });
+    }, t('detail.loadFailed'));
+
+  const toggleVoiceDictation = () => {
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+    const speechWin = window as unknown as {
+      SpeechRecognition?: new () => any;
+      webkitSpeechRecognition?: new () => any;
+    };
+    const SpeechCtor = speechWin.SpeechRecognition ?? speechWin.webkitSpeechRecognition;
+    if (!SpeechCtor) {
+      notify(t('advancedList.voiceUnsupported'), false);
+      return;
+    }
+    const recognition = new SpeechCtor();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (event: any) => {
+      const transcript = event?.results?.[0]?.[0]?.transcript ?? '';
+      if (transcript) {
+        setSmartText((prev) => (prev ? prev + ', ' + transcript : transcript));
+      }
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
+
+  const submitSmartEntry = () =>
+    guard(async () => {
+      if (!smartText.trim()) return;
+      const res = await itemsApi.smartEntry(id, { text: smartText.trim(), autoCreate: true });
+      setSmartText('');
+      setShowSmartEntry(false);
+      notify(t('advancedList.smartEntryDone', { count: res.created.length }));
+    }, t('addItem.failed'));
+
+  const handleReceiptFileChange = async (file: File | null) => {
+    if (!file) return;
+    if (file.type.indexOf('text/') === 0) {
+      const text = await file.text();
+      setReceiptText(text);
+      return;
+    }
+    if (!receiptText.trim() && list) {
+      const sample = formatSampleReceiptFromItems(list.pending);
+      if (sample) setReceiptText(sample);
+    }
+  };
+
+  const analyzeReceipt = () =>
+    guard(async () => {
+      if (!receiptText.trim()) return;
+      const res = await itemsApi.scanReceipt(id, receiptText.trim());
+      setReceiptMatches(res.lines);
+    }, t('detail.loadFailed'));
+
+  const applyReceiptMatches = () =>
+    guard(async () => {
+      if (!receiptMatches) return;
+      const matchesToApply = receiptMatches
+        .filter((line) => line.matchedItemId !== null)
+        .map((line) => ({
+          itemId: line.matchedItemId!,
+          paidPrice: line.price,
+          suggestedRecurrenceDays: line.suggestedRecurrenceDays,
+        }));
+      if (matchesToApply.length === 0) return;
+      const res = await itemsApi.applyReceipt(id, matchesToApply);
+      setReceiptMatches(null);
+      setReceiptText('');
+      setShowReceiptScan(false);
+      notify(t('advancedList.receiptDone', { count: res.purchasedCount }));
+    }, t('detail.failures.purchase'));
+
   const overdueCount = useMemo(
     () => (list?.pending ?? []).filter((item) => item.isOverdue).length,
     [list],
@@ -196,6 +288,8 @@ export function ListDetailPage() {
   }
 
   if (!list || !user) return <Spinner label={t('detail.loading')} />;
+  const isAdvanced = isAdvancedList(list);
+  const listCurrency = getListCurrency(list);
 
   return (
     <div data-testid="list-detail-page" data-list-id={list.id}>
@@ -300,8 +394,242 @@ export function ListDetailPage() {
         </div>
       </div>
 
+      {/* ── Calculadora Financiera y Herramientas Avanzadas ────────── */}
+      {isAdvanced && (
+        <div className="card mb-4 border-primary-subtle shadow-sm" data-testid="advanced-budget-card">
+          <div className="card-body">
+            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <div className="d-flex align-items-center gap-2">
+                <span className="lc-chip lc-chip--tag">
+                  <i className="bi bi-stars me-1" aria-hidden="true" />
+                  {t('advancedList.premiumBadge')}
+                </span>
+                <h2 className="h6 mb-0 fw-bold">{t('advancedList.budgetSummaryTitle')}</h2>
+              </div>
+              {list.hasHouseholdPremium && (
+                <span className="lc-chip lc-chip--done" data-testid="household-premium-badge">
+                  <i className="bi bi-house-heart me-1" aria-hidden="true" />
+                  {t('advancedList.householdBadge')}
+                </span>
+              )}
+            </div>
+
+            <div className="d-flex flex-wrap gap-3 mb-3">
+              <span className="lc-chip" data-testid="budget-pending-total">
+                {t('advancedList.pendingTotal', {
+                  amount: (list.estimatedPendingTotal ?? 0).toFixed(2),
+                  currency: listCurrency,
+                })}
+              </span>
+              <span className="lc-chip lc-chip--done" data-testid="budget-purchased-total">
+                {t('advancedList.purchasedTotal', {
+                  amount: (list.purchasedTotal ?? 0).toFixed(2),
+                  currency: listCurrency,
+                })}
+              </span>
+              <span className="lc-chip fw-bold" data-testid="budget-projected-total">
+                {t('advancedList.projectedTotal', {
+                  amount: ((list.estimatedPendingTotal ?? 0) + (list.purchasedTotal ?? 0)).toFixed(2),
+                  currency: listCurrency,
+                })}
+              </span>
+              {list.budget !== null && list.budget !== undefined && list.budget > 0 && (
+                <span className="lc-chip" data-testid="budget-limit-chip">
+                  {t('advancedList.budgetLimit', {
+                    amount: Number(list.budget).toFixed(2),
+                    currency: listCurrency,
+                  })}
+                </span>
+              )}
+            </div>
+
+            {list.budget !== null &&
+              list.budget !== undefined &&
+              list.budget > 0 &&
+              (list.estimatedPendingTotal ?? 0) + (list.purchasedTotal ?? 0) > Number(list.budget) && (
+                <div className="alert alert-danger py-2 small mb-3" role="alert" data-testid="over-budget-alert">
+                  <i className="bi bi-exclamation-octagon me-1" aria-hidden="true" />
+                  {t('advancedList.overBudgetWarning')}
+                </div>
+              )}
+
+            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top">
+              <div className="form-check form-switch mb-0">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  role="switch"
+                  id="aisles-switch"
+                  checked={list.autoSortAisles ?? true}
+                  onChange={toggleAutoSortAisles}
+                  disabled={busy}
+                  data-testid="aisles-switch"
+                />
+                <label className="form-check-label small fw-semibold" htmlFor="aisles-switch">
+                  {t('advancedList.sortByAisles')}
+                </label>
+              </div>
+
+              <div className="d-flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => {
+                    setShowSmartEntry((v) => !v);
+                    setShowReceiptScan(false);
+                  }}
+                  data-testid="smart-entry-button"
+                >
+                  <i className="bi bi-mic me-1" aria-hidden="true" />
+                  {t('advancedList.smartEntryBtn')}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => {
+                    setShowReceiptScan((v) => !v);
+                    setShowSmartEntry(false);
+                  }}
+                  data-testid="receipt-scan-button"
+                >
+                  <i className="bi bi-receipt me-1" aria-hidden="true" />
+                  {t('advancedList.receiptBtn')}
+                </button>
+              </div>
+            </div>
+
+            {showSmartEntry && (
+              <div className="mt-3 pt-3 border-top" data-testid="smart-entry-panel">
+                <h3 className="h6 fw-semibold mb-1">{t('advancedList.smartEntryTitle')}</h3>
+                <p className="text-muted small mb-2">{t('advancedList.smartEntryHint')}</p>
+                <textarea
+                  className="form-control mb-2"
+                  rows={2}
+                  value={smartText}
+                  onChange={(e) => setSmartText(e.target.value)}
+                  placeholder={t('advancedList.smartEntryPlaceholder')}
+                  data-testid="smart-entry-input"
+                />
+                <div className="d-flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={toggleVoiceDictation}
+                    data-testid="smart-voice-button"
+                  >
+                    <i className="bi bi-mic-fill me-1" aria-hidden="true" />
+                    {listening ? t('advancedList.voiceStop') : t('advancedList.voiceStart')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    disabled={busy || !smartText.trim()}
+                    onClick={submitSmartEntry}
+                    data-testid="smart-entry-submit"
+                  >
+                    {t('advancedList.smartEntrySubmit')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showReceiptScan && (
+              <div className="mt-3 pt-3 border-top" data-testid="receipt-scan-panel">
+                <h3 className="h6 fw-semibold mb-1">{t('advancedList.receiptTitle')}</h3>
+                <p className="text-muted small mb-2">{t('advancedList.receiptHint')}</p>
+                <div className="mb-2">
+                  <label className="form-label small" htmlFor="receipt-file">
+                    {t('advancedList.receiptPhotoLabel')}
+                  </label>
+                  <input
+                    id="receipt-file"
+                    type="file"
+                    className="form-control form-control-sm"
+                    accept="image/*,text/plain"
+                    onChange={(e) => void handleReceiptFileChange(e.target.files?.[0] ?? null)}
+                    data-testid="receipt-file-input"
+                  />
+                </div>
+                <div className="mb-2">
+                  <label className="form-label small" htmlFor="receipt-text">
+                    {t('advancedList.receiptTextLabel')}
+                  </label>
+                  <textarea
+                    id="receipt-text"
+                    className="form-control"
+                    rows={3}
+                    value={receiptText}
+                    onChange={(e) => setReceiptText(e.target.value)}
+                    placeholder={t('advancedList.receiptTextPlaceholder')}
+                    data-testid="receipt-text-input"
+                  />
+                </div>
+                <div className="d-flex flex-wrap gap-2 mb-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    disabled={busy || !receiptText.trim()}
+                    onClick={analyzeReceipt}
+                    data-testid="receipt-analyze-button"
+                  >
+                    {t('advancedList.receiptAnalyze')}
+                  </button>
+                  {receiptMatches && receiptMatches.some((m) => m.matchedItemId !== null) && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-success"
+                      disabled={busy}
+                      onClick={applyReceiptMatches}
+                      data-testid="receipt-apply-button"
+                    >
+                      {t('advancedList.receiptApply')}
+                    </button>
+                  )}
+                </div>
+
+                {receiptMatches && (
+                  <div className="mt-2" data-testid="receipt-matches-list">
+                    {receiptMatches.filter((m) => m.matchedItemId !== null).length === 0 ? (
+                      <div className="text-muted small">{t('advancedList.receiptNoMatches')}</div>
+                    ) : (
+                      <ul className="list-group list-group-flush small">
+                        {receiptMatches
+                          .filter((m) => m.matchedItemId !== null)
+                          .map((match) => (
+                            <li
+                              key={match.rawLine}
+                              className="list-group-item d-flex flex-wrap justify-content-between align-items-center px-0"
+                            >
+                              <span>
+                                {t('advancedList.receiptMatchedTo', { name: match.matchedItemName ?? '' })}
+                                {match.price !== null && ' · $' + match.price.toFixed(2)}
+                              </span>
+                              {match.suggestedRecurrenceDays !== null && (
+                                <span className="lc-chip lc-chip--tag">
+                                  {t('advancedList.receiptRecurrenceAdjust', {
+                                    days: match.suggestedRecurrenceDays,
+                                  })}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Alta de productos ──────────────────────────────────────── */}
-      <AddItemForm listId={list.id} disabled={busy} onError={(message) => notify(message, false)} />
+      <AddItemForm
+        listId={list.id}
+        isAdvanced={isAdvanced}
+        disabled={busy}
+        onError={(message) => notify(message, false)}
+      />
 
       {/* ── Pendientes ─────────────────────────────────────────────── */}
       <section className="mb-5" data-testid="pending-section">
@@ -322,6 +650,8 @@ export function ListDetailPage() {
               <PendingItem
                 key={item.id}
                 item={item}
+                isAdvanced={isAdvanced}
+                currency={listCurrency}
                 disabled={busy}
                 showDates={showDates}
                 onPurchase={purchase}
@@ -373,7 +703,17 @@ export function ListDetailPage() {
           onNotice={notify}
         />
       )}
-      {editingItem && <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onSaved={() => { void load(); }} onError={(message) => notify(message, false)} />}
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          isAdvanced={isAdvanced}
+          onClose={() => setEditingItem(null)}
+          onSaved={() => {
+            void load();
+          }}
+          onError={(message) => notify(message, false)}
+        />
+      )}
     </div>
   );
 }

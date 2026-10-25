@@ -33,10 +33,38 @@ export class BillingService {
     const active=rows.find((r:any)=>['active','trialing','grace'].includes(r.status)&&r.period_end&&new Date(r.period_end).getTime()>Date.now());
     return {plan:active?'premium':'free',subscription:active||rows[0]||null,accountToken:userId,googleAccountId:createHash('sha256').update(userId).digest('hex')};
   }
-  async assertCapacity(userId:string,kind:'lists'|'items',count:number) {
+  /**
+   * Suscripción Familiar / Hogar:
+   * Si la persona propietaria o cualquier integrante de la lista tiene Premium activo,
+   * todos los invitados en esa lista desbloquean los beneficios y límites Premium.
+   */
+  async hasHouseholdPremium(listId: string, fallbackOwnerId?: string): Promise<boolean> {
+    const rows = await this.db.query(
+      `SELECT 1 FROM billing_subscriptions s
+       WHERE s.status IN ('active', 'trialing', 'grace')
+         AND s.period_end > now()
+         AND (
+           s.user_id = $2
+           OR s.user_id IN (SELECT m.user_id FROM list_members m WHERE m.list_id = $1)
+         )
+       LIMIT 1`,
+      [listId, fallbackOwnerId ?? null],
+    );
+    return rows.length > 0;
+  }
+  async assertCanUseAdvancedList(userId: string, listId?: string): Promise<void> {
+    const userState = await this.state(userId);
+    if (userState.plan === 'premium') return;
+    if (listId && (await this.hasHouseholdPremium(listId, userId))) return;
+    throw new ForbiddenException('Solo las cuentas Premium pueden crear listas avanzadas.');
+  }
+  async assertCapacity(userId:string,kind:'lists'|'items',count:number,listId?:string) {
     const technical=kind==='lists'?100:2000;
     if(count>=technical)throw new ForbiddenException('Se alcanzó el límite técnico de capacidad. Reduce las listas o elementos antes de añadir más.');
-    const premium=(await this.state(userId)).plan==='premium';const limit=this.limit(`${premium?'PREMIUM':'FREE'}_MAX_${kind==='lists'?'LISTS':'ITEMS_PER_LIST'}`);
+    const isItemsCheck = kind === 'items';
+    const hasHousehold = Boolean(isItemsCheck && listId && (await this.hasHouseholdPremium(listId, userId)));
+    const premium = (await this.state(userId)).plan === 'premium' || hasHousehold;
+    const limit=this.limit(`${premium?'PREMIUM':'FREE'}_MAX_${kind==='lists'?'LISTS':'ITEMS_PER_LIST'}`);
     if(limit && count>=limit)throw new ForbiddenException('Has alcanzado el límite de tu plan. Conservas tus datos; revisa Mi plan para ampliar tu capacidad.');
   }
   private async price() {

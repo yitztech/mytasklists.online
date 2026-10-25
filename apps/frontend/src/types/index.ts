@@ -2,6 +2,7 @@
 import type { LoginResponse, MfaChallenge } from '@lista/contracts';
 
 export type {
+  AisleCategory,
   AppNotification,
   AuthProviders,
   AuthResponse,
@@ -9,10 +10,16 @@ export type {
   ItemStatus,
   ListDetail,
   ListSummary,
+  ListType,
   LoginResponse,
   Member,
   MemberRole,
   MfaChallenge,
+  ReceiptApplyResponse,
+  ReceiptLineMatch,
+  ReceiptScanResponse,
+  SmartEntryResponse,
+  SmartParsedItem,
   User,
 } from '@lista/contracts';
 

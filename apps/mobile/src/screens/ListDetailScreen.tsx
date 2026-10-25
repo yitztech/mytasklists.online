@@ -26,6 +26,15 @@ import { itemsApi, listsApi, type PendingInvitation } from '../api/endpoints';
 import { useSocket, useSocketEvent } from '../context/SocketContext';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
+import {
+  formatMoney,
+  getListCurrency,
+  getProjectedTotal,
+  groupItemsByAisle,
+  hasPositiveBudget,
+  isAdvancedList,
+  isOverBudget,
+} from '../utils/aisles';
 import { itemImageForm } from '../utils/item-image';
 import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,6 +62,9 @@ export function ListDetailScreen({ route, navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
 
   const [name, setName] = useState('');
+  const [estimatedPrice, setEstimatedPrice] = useState('');
+  const [smartText, setSmartText] = useState('');
+  const [receiptText, setReceiptText] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceDays, setRecurrenceDays] = useState(14);
   const [shareEmail, setShareEmail] = useState('');
@@ -189,9 +201,28 @@ export function ListDetailScreen({ route, navigation }: any) {
     if (!name.trim() || busy) return;
     const amount=Number(quantity.replace(',','.'));const selected=unit===CUSTOM_UNIT?customUnit.trim():unit;
     if(!Number.isFinite(amount)||amount<0.01||amount>99999||Math.abs(Math.round(amount*100)-amount*100)>1e-7||!selected||selected.length>20){Alert.alert(t('common.oops'),t('detail.invalidQuantity'));return;}
+    const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
     setBusy(true);
-    try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{})});const selectedPhoto=photo;setName('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(t('detail.itemAdded'),t('detail.photoUploadFailed'));}}await load();}
+    try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{}),...(parsedPrice!==null&&Number.isFinite(parsedPrice)&&parsedPrice>=0?{estimatedPrice:parsedPrice}:{})});const selectedPhoto=photo;setName('');setEstimatedPrice('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(t('detail.itemAdded'),t('detail.photoUploadFailed'));}}await load();}
     catch(e){Alert.alert(t('common.oops'),(e as Error).message);}finally{setBusy(false);}
+  };
+
+  const submitSmartEntry = async () => {
+    if (!smartText.trim() || busy) return;
+    await guard(async () => {
+      const res = await itemsApi.smartEntry(listId, { text: smartText.trim(), createItems: true });
+      setSmartText('');
+      Alert.alert(t('advancedList.smartEntryTitle'), t('advancedList.smartEntryDone', { count: res.created.length }));
+    });
+  };
+
+  const submitReceiptApply = async () => {
+    if (!receiptText.trim() || busy) return;
+    await guard(async () => {
+      const res = await itemsApi.applyReceipt(listId, { receiptText: receiptText.trim() });
+      setReceiptText('');
+      Alert.alert(t('advancedList.receiptTitle'), t('advancedList.receiptDone', { count: res.purchasedCount }));
+    });
   };
 
   if (!list) {
@@ -241,6 +272,20 @@ export function ListDetailScreen({ route, navigation }: any) {
         <Text style={{color:colors.ink}}>{t('detail.unit')}</Text>
         <SelectField label={t('detail.unit')} value={unit} onChange={setUnit} testID="item-unit-input" options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:CUSTOM_UNIT}]}/>
         {unit===CUSTOM_UNIT && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
+        {isAdvancedList(list) && (
+          <>
+            <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('advancedList.estimatedPriceLabel')}</Text>
+            <TextInput
+              accessibilityLabel={t('advancedList.estimatedPriceLabel')}
+              style={styles.addInput}
+              value={estimatedPrice}
+              onChangeText={setEstimatedPrice}
+              keyboardType="decimal-pad"
+              placeholder={t('advancedList.estimatedPriceLabel')}
+              testID="item-estimated-price-input"
+            />
+          </>
+        )}
         <Text style={{ color: colors.ink, marginTop: spacing.md }}>{t('detail.photoOptional')}</Text><ItemPhotoPicker uri={photo} onChange={setPhoto} />
         <View style={styles.recurRow}>
           <Text style={styles.recurLabel}>{t('detail.repeat')}</Text>
@@ -279,6 +324,86 @@ export function ListDetailScreen({ route, navigation }: any) {
           style={{ marginTop: spacing.md }}
         />
       </View>
+
+      {/* ── Panel Avanzado (Presupuesto, Voz/Texto y OCR) ────────────── */}
+      {isAdvancedList(list) && (
+        <View style={styles.shareCard} testID="advanced-list-panel">
+          <View style={styles.recurRow}>
+            <Badge tone="info" text={t('advancedList.premiumBadge')} />
+            {list.hasHouseholdPremium && list.isShared && (
+              <Badge tone="success" text={t('advancedList.householdBadge')} />
+            )}
+            {isOverBudget(list) && (
+              <Badge tone="danger" text={t('advancedList.overBudgetWarning')} />
+            )}
+          </View>
+          <Text style={styles.recurLabel}>
+            {t('advancedList.pendingTotal', {
+              amount: (list.estimatedPendingTotal ?? 0).toFixed(2),
+              currency: getListCurrency(list),
+            })}
+          </Text>
+          <Text style={styles.budgetSubText}>
+            {t('advancedList.purchasedTotal', {
+              amount: (list.purchasedTotal ?? 0).toFixed(2),
+              currency: getListCurrency(list),
+            })}
+          </Text>
+          <Text style={styles.budgetSubText}>
+            {t('advancedList.projectedTotal', {
+              amount: getProjectedTotal(list),
+              currency: getListCurrency(list),
+            })}
+          </Text>
+          {hasPositiveBudget(list) && (
+            <Text style={styles.budgetSubText}>
+              {t('advancedList.budgetLabel')}: {formatMoney(list.budget ?? 0, getListCurrency(list))}
+            </Text>
+          )}
+          <View style={styles.recurRow}>
+            <Text style={styles.recurLabel}>{t('advancedList.sortByAisles')}</Text>
+            <Switch
+              testID="aisle-sort-switch"
+              value={Boolean(list.autoSortAisles)}
+              onValueChange={(value) => guard(() => listsApi.update(listId, { autoSortAisles: value }))}
+              trackColor={{ true: colors.brand, false: colors.lineStrong }}
+            />
+          </View>
+          <SectionLabel>{t('advancedList.smartEntryTitle')}</SectionLabel>
+          <TextInput
+            testID="smart-entry-input"
+            style={styles.addInput}
+            placeholder={t('advancedList.smartEntryPlaceholder')}
+            placeholderTextColor={colors.muted}
+            value={smartText}
+            onChangeText={setSmartText}
+          />
+          <Button
+            title={t('advancedList.smartEntrySubmit')}
+            onPress={submitSmartEntry}
+            disabled={!smartText.trim() || busy}
+            testID="smart-entry-submit"
+            style={{ marginTop: spacing.sm }}
+          />
+          <SectionLabel>{t('advancedList.receiptTitle')}</SectionLabel>
+          <TextInput
+            testID="receipt-ocr-input"
+            style={styles.addInput}
+            placeholder={t('advancedList.receiptPlaceholder')}
+            placeholderTextColor={colors.muted}
+            multiline
+            value={receiptText}
+            onChangeText={setReceiptText}
+          />
+          <Button
+            title={t('advancedList.receiptApply')}
+            onPress={submitReceiptApply}
+            disabled={!receiptText.trim() || busy}
+            testID="receipt-ocr-submit"
+            style={{ marginTop: spacing.sm }}
+          />
+        </View>
+      )}
 
       {/* ── Cabecera de la lista ─────────────────────────────────────── */}
       <View style={styles.headerRow}>
@@ -358,13 +483,34 @@ export function ListDetailScreen({ route, navigation }: any) {
       {/* ── Pendientes ───────────────────────────────────────────────── */}
       <SectionLabel>{t('detail.pendingHeading', { count: list.pending.length })}</SectionLabel>
       <View testID="pending-list" style={list.pending.length > 0 ? styles.sheet : undefined}>
-        {list.pending.map((item, index) => (
+        {isAdvancedList(list) && list.autoSortAisles
+          ? groupItemsByAisle(list.pending).map((group) => (
+              <View key={group.aisle} testID="aisle-group">
+                <Text style={styles.aisleHeader}>
+                  {group.icon} {group.aisle}
+                </Text>
+                {group.items.map((item, index) => (
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    first={index === 0}
+                    disabled={busy}
+                    showDates={showDates}
+                    showPrice={isAdvancedList(list)}
+                    onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
+                    onEdit={setEditingItem}
+                  />
+                ))}
+              </View>
+            ))
+          : list.pending.map((item, index) => (
           <ItemRow
             key={item.id}
             item={item}
             first={index === 0}
             disabled={busy}
             showDates={showDates}
+            showPrice={isAdvancedList(list)}
             onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
             onEdit={setEditingItem}
             onLongPress={(target: Item) =>
@@ -406,6 +552,7 @@ export function ListDetailScreen({ route, navigation }: any) {
                 first={index === 0}
                 disabled={busy}
                 showDates={showDates}
+                showPrice={isAdvancedList(list)}
                 onRestore={(target) => guard(() => itemsApi.restore(target.id))}
                 onClose={(target) => guard(() => itemsApi.close(target.id))}
                 onEdit={setEditingItem}
@@ -414,7 +561,7 @@ export function ListDetailScreen({ route, navigation }: any) {
           </View>
         </>
       )}
-      {editingItem && <EditItemModal key={editingItem.id} item={editingItem} onClose={() => setEditingItem(null)} onSaved={() => { void load(); }} />}
+      {editingItem && <EditItemModal key={editingItem.id} item={editingItem} isAdvanced={isAdvancedList(list)} onClose={() => setEditingItem(null)} onSaved={() => { void load(); }} />}
     </ScrollView>
     {list.ownerId === user?.id && (
       <Modal
@@ -494,6 +641,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   recurLabel: { fontSize: 15, color: colors.ink, fontWeight: '600' },
+  budgetSubText: { color: colors.inkSoft, fontSize: 13, marginTop: 2 },
+  aisleHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.inkSoft,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.bg,
+  },
   presetRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   preset: {
     minHeight: 40,

@@ -5,18 +5,24 @@ import type {
   UpdateMemberRequest,
 } from '@lista/contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
   IsEnum,
   IsHexColor,
+  IsIn,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Length,
+  Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
-import { MemberRole } from '../../../database/entities';
+import { ListType, MemberRole } from '../../../database/entities';
 
 export class CreateListDto implements CreateListRequest {
   @ApiProperty({ example: 'Despensa quincenal' })
@@ -40,6 +46,30 @@ export class CreateListDto implements CreateListRequest {
   @IsString()
   @Length(1, 8)
   icon?: string;
+
+  @ApiPropertyOptional({ enum: ListType, default: ListType.NORMAL })
+  @IsOptional()
+  @IsIn([ListType.NORMAL, ListType.ADVANCED])
+  listType?: ListType;
+
+  @ApiPropertyOptional({ example: 1500 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(9999999.99)
+  budget?: number | null;
+
+  @ApiPropertyOptional({ example: 'MXN', default: 'MXN' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z]{3}$/)
+  currency?: string;
+
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  autoSortAisles?: boolean;
 }
 
 export class UpdateListDto implements UpdateListRequest {
@@ -70,6 +100,30 @@ export class UpdateListDto implements UpdateListRequest {
   @IsOptional()
   @IsBoolean()
   isArchived?: boolean;
+
+  @ApiPropertyOptional({ enum: ListType })
+  @IsOptional()
+  @IsIn([ListType.NORMAL, ListType.ADVANCED])
+  listType?: ListType;
+
+  @ApiPropertyOptional({ example: 1500 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(9999999.99)
+  budget?: number | null;
+
+  @ApiPropertyOptional({ example: 'MXN' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z]{3}$/)
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  autoSortAisles?: boolean;
 }
 
 export class ShareListDto implements ShareListRequest {

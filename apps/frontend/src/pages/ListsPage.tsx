@@ -1,29 +1,45 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { listsApi } from '../api/endpoints';
+import { billingApi, listsApi } from '../api/endpoints';
 import { ApiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useSocketEvent } from '../context/SocketContext';
 import { useToast } from '../context/ToastContext';
 import { Spinner } from '../components/Spinner';
 import { EmptyState } from '../components/EmptyState';
-import type { ListSummary } from '../types';
+import {
+  getListCurrency,
+  getTypeButtonClass,
+  isAdvancedList,
+  LIST_TYPE_ADVANCED,
+  LIST_TYPE_NORMAL,
+} from '../utils/aisles';
+import type { ListSummary, ListType } from '../types';
 
 const COLORS = ['#1d5b45', '#c8371f', '#d99a00', '#2f6f9f', '#7a3e7e', '#4b5a52'];
 const ICONS = ['🛒', '🥑', '🧴', '🔨', '🎉', '🐶'];
+const CURRENCIES = ['MXN', 'USD', 'CAD', 'EUR'];
 
 export function ListsPage() {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListSummary[] | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState(ICONS[0]);
+  const [listType, setListType] = useState<ListType>(LIST_TYPE_NORMAL);
+  const [budget, setBudget] = useState('');
+  const [currency, setCurrency] = useState(CURRENCIES[0]);
   const { show } = useToast();
   const { t } = useTranslation();
+  const isSelectedAdvanced = listType === LIST_TYPE_ADVANCED;
+  const isSelectedNormal = listType === LIST_TYPE_NORMAL;
+  const normalBtnClass = getTypeButtonClass(isSelectedNormal);
+  const advancedBtnClass = getTypeButtonClass(isSelectedAdvanced);
 
   const load = useCallback(async () => {
     try {
@@ -37,6 +53,10 @@ export function ListsPage() {
 
   useEffect(() => {
     void load();
+    billingApi
+      .me()
+      .then((state) => setIsPremium(state.plan === 'premium'))
+      .catch(() => setIsPremium(false));
   }, [load]);
 
   // Cualquier cambio en una lista compartida refresca el resumen
@@ -81,10 +101,35 @@ export function ListsPage() {
       });
       return;
     }
+    if (isSelectedAdvanced && !isPremium) {
+      show({
+        title: t('lists.createFailed'),
+        body: t('advancedList.premiumRequired'),
+        variant: 'danger',
+      });
+      return;
+    }
+    const parsedBudget = budget.trim() ? Number(budget.replace(',', '.')) : null;
+    if (parsedBudget !== null && (!Number.isFinite(parsedBudget) || parsedBudget < 0 || parsedBudget > 9999999.99)) {
+      show({
+        title: t('lists.createFailed'),
+        body: t('lists.createFailed'),
+        variant: 'danger',
+      });
+      return;
+    }
     setCreating(true);
     try {
-      await listsApi.create({ name: trimmed, color, icon });
+      await listsApi.create({
+        name: trimmed,
+        color,
+        icon,
+        listType,
+        ...(isSelectedAdvanced ? { budget: parsedBudget, currency, autoSortAisles: true } : {}),
+      });
       setName('');
+      setBudget('');
+      setListType(LIST_TYPE_NORMAL);
       setShowForm(false);
       show({ title: t('lists.created'), body: t('lists.createdBody', { name: trimmed }), variant: 'success' });
       await load();
@@ -185,6 +230,77 @@ export function ListsPage() {
                   ))}
                 </div>
               </div>
+              <div className="col-12">
+                <span className="form-label d-block">{t('advancedList.typeLabel')}</span>
+                <div className="row g-2" data-testid="new-list-type-selector">
+                  <div className="col-12 col-md-6">
+                    <button
+                      type="button"
+                      className={normalBtnClass}
+                      onClick={() => setListType(LIST_TYPE_NORMAL)}
+                      data-testid="list-type-normal"
+                      aria-pressed={isSelectedNormal}
+                    >
+                      <div className="fw-semibold">{t('advancedList.typeNormal')}</div>
+                      <div className="small opacity-75">{t('advancedList.typeNormalDesc')}</div>
+                    </button>
+                  </div>
+                  <div className="col-12 col-md-6">
+                    <button
+                      type="button"
+                      className={advancedBtnClass}
+                      onClick={() => setListType(LIST_TYPE_ADVANCED)}
+                      data-testid="list-type-advanced"
+                      aria-pressed={isSelectedAdvanced}
+                    >
+                      <div className="fw-semibold">{t('advancedList.typeAdvanced')}</div>
+                      <div className="small opacity-75">{t('advancedList.typeAdvancedDesc')}</div>
+                    </button>
+                  </div>
+                </div>
+                {isSelectedAdvanced && !isPremium && (
+                  <div className="alert alert-warning mt-2 mb-0 py-2 small" data-testid="advanced-list-premium-warning">
+                    {t('advancedList.premiumRequired')}
+                  </div>
+                )}
+              </div>
+              {isSelectedAdvanced && isPremium && (
+                <>
+                  <div className="col-8 col-md-4">
+                    <label className="form-label" htmlFor="list-budget">
+                      {t('advancedList.budgetLabel')}
+                    </label>
+                    <input
+                      id="list-budget"
+                      type="text"
+                      inputMode="decimal"
+                      className="form-control"
+                      value={budget}
+                      onChange={(event) => setBudget(event.target.value)}
+                      placeholder={t('advancedList.budgetPlaceholder')}
+                      data-testid="new-list-budget"
+                    />
+                  </div>
+                  <div className="col-4 col-md-2">
+                    <label className="form-label" htmlFor="list-currency">
+                      {t('advancedList.currencyLabel')}
+                    </label>
+                    <select
+                      id="list-currency"
+                      className="form-select"
+                      value={currency}
+                      onChange={(event) => setCurrency(event.target.value)}
+                      data-testid="new-list-currency"
+                    >
+                      {CURRENCIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
             <div className="d-flex gap-2 mt-4">
               <button
@@ -271,6 +387,12 @@ export function ListsPage() {
                 </div>
 
                 <div className="lc-list-stats">
+                  {isAdvancedList(list) && (
+                    <span className="lc-chip lc-chip--tag" data-testid="list-advanced-badge">
+                      <i className="bi bi-stars" aria-hidden="true" />
+                      {t('advancedList.premiumBadge')}
+                    </span>
+                  )}
                   <span className="lc-chip lc-chip--done" data-testid="list-pending-count">
                     {t('lists.pending', { count: list.pendingCount })}
                   </span>
@@ -286,6 +408,14 @@ export function ListsPage() {
                   {list.overdueCount > 0 && (
                     <span className="lc-chip lc-chip--late" data-testid="list-overdue-count">
                       {t('lists.overdue', { count: list.overdueCount })}
+                    </span>
+                  )}
+                  {isAdvancedList(list) && (list.estimatedPendingTotal ?? 0) > 0 && (
+                    <span className="lc-chip" data-testid="list-estimated-total">
+                      {t('advancedList.pendingTotal', {
+                        amount: (list.estimatedPendingTotal ?? 0).toFixed(2),
+                        currency: getListCurrency(list),
+                      })}
                     </span>
                   )}
                 </div>

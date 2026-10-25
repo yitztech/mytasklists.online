@@ -8,6 +8,19 @@ export type MemberRole = 'owner' | 'editor' | 'viewer';
 export type AuthProvider = 'local' | 'google' | 'apple';
 export type UserRole = 'user' | 'admin';
 export type DevicePlatform = 'ios' | 'android' | 'web';
+export type ListType = 'normal' | 'advanced';
+export type AisleCategory =
+  | 'produce'
+  | 'dairy'
+  | 'meat'
+  | 'bakery'
+  | 'pantry'
+  | 'frozen'
+  | 'beverages'
+  | 'cleaning'
+  | 'personal'
+  | 'pets'
+  | 'general';
 
 export type { Locale as SupportedLocale, EnabledLocale } from './locales';
 import type { Locale as SupportedLocale, LegacyLocale } from './locales';
@@ -92,6 +105,10 @@ export interface Item {
   daysOverdue: number;
   daysUntilDue: number | null;
   daysUntilReactivation: number | null;
+  // ── campos de listas avanzadas (Pilar Financiero) ──
+  estimatedPrice?: number | null;
+  lastPaidPrice?: number | null;
+  storeName?: string | null;
 }
 
 export interface Member {
@@ -123,6 +140,51 @@ export interface ListSummary {
   recurringCount: number;
   createdAt: string;
   updatedAt: string;
+  // ── campos de listas avanzadas (Finanzas, Pasillos y Hogar Premium) ──
+  listType?: ListType;
+  budget?: number | null;
+  currency?: string;
+  autoSortAisles?: boolean;
+  estimatedPendingTotal?: number;
+  purchasedTotal?: number;
+  hasHouseholdPremium?: boolean;
+}
+
+export interface SmartParsedItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  category: AisleCategory | string;
+  estimatedPrice: number | null;
+  isRecurring: boolean;
+  recurrenceDays: number | null;
+}
+
+export interface SmartEntryResponse {
+  parsed: SmartParsedItem[];
+  created: Item[];
+}
+
+export interface ReceiptLineMatch {
+  rawLine: string;
+  detectedName: string;
+  price: number | null;
+  quantity: number;
+  matchedItemId: string | null;
+  matchedItemName: string | null;
+  previousRecurrenceDays: number | null;
+  suggestedRecurrenceDays: number | null;
+}
+
+export interface ReceiptScanResponse {
+  lines: ReceiptLineMatch[];
+  detectedTotal: number;
+}
+
+export interface ReceiptApplyResponse {
+  purchasedCount: number;
+  recurrenceAdjustedCount: number;
+  items: Item[];
 }
 
 export interface ListDetail extends ListSummary {

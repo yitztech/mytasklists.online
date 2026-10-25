@@ -75,5 +75,10 @@ export const toItemView = (item: ListItem, now: Date = new Date()): ItemView => 
     daysOverdue: overdue && dueAt ? Math.max(1, daysBetween(dueAt, now)) : 0,
     daysUntilDue: dueAt && !overdue ? daysAhead(now, dueAt) : null,
     daysUntilReactivation: nextActivationAt ? daysAhead(now, nextActivationAt) : null,
+    estimatedPrice:
+      item.estimatedPrice !== null && item.estimatedPrice !== undefined ? Number(item.estimatedPrice) : null,
+    lastPaidPrice:
+      item.lastPaidPrice !== null && item.lastPaidPrice !== undefined ? Number(item.lastPaidPrice) : null,
+    storeName: item.storeName ?? null,
   };
 };

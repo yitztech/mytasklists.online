@@ -155,4 +155,6 @@ export const ERRORS_DE: Record<string, string> = {
   'Firma de pago inválida': 'Ungültige Zahlungssignatur',
   'Elige descuento porcentual o fijo': 'Wähle prozentualen oder festen Rabatt',
   'Código no encontrado': 'Code nicht gefunden',
+  'Solo las cuentas Premium pueden crear listas avanzadas.': 'Nur Premium-Konten können erweiterte Listen erstellen.',
+  'Esta herramienta solo está disponible en listas avanzadas.': 'Dieses Werkzeug ist nur in erweiterten Listen verfügbar.',
 };

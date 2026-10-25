@@ -17,6 +17,14 @@ const numericTransformer = {
   from: (value: string | null): number => (value === null ? 0 : parseFloat(value)),
 };
 
+const nullableNumericTransformer = {
+  to: (value: number | null | undefined) => value ?? null,
+  from: (value: string | number | null | undefined): number | null => {
+    if (value === null || value === undefined) return null;
+    return parseFloat(String(value));
+  },
+};
+
 export enum ItemStatus {
   /** Visible en la lista de arriba, pendiente de comprar */
   PENDING = 'pending',
@@ -54,6 +62,31 @@ export class ListItem {
 
   @Column({ length: 40, default: 'general' })
   category: string;
+
+  @Column({
+    name: 'estimated_price',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    default: null,
+    transformer: nullableNumericTransformer,
+  })
+  estimatedPrice: number | null;
+
+  @Column({
+    name: 'last_paid_price',
+    type: 'numeric',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    default: null,
+    transformer: nullableNumericTransformer,
+  })
+  lastPaidPrice: number | null;
+
+  @Column({ name: 'store_name', type: 'varchar', length: 80, nullable: true, default: null })
+  storeName: string | null;
 
   /** Nombre aleatorio del archivo; nunca conserva el nombre aportado por el cliente. */
   @Column({ name: 'image_key', type: 'varchar', length: 80, nullable: true })

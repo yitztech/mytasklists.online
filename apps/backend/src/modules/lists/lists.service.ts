@@ -21,6 +21,7 @@ import {
   ListInvitation,
   ListItem,
   ListMember,
+  ListType,
   MemberRole,
   NotificationType,
   ShoppingList,
@@ -118,7 +119,14 @@ export class ListsService {
         count(i.id) FILTER (WHERE i.status='pending')::int AS pending,
         count(i.id) FILTER (WHERE i.status='purchased')::int AS purchased,
         count(i.id) FILTER (WHERE i.status='pending' AND i.is_recurring AND i.due_at<now())::int AS overdue,
-        count(i.id) FILTER (WHERE i.is_recurring)::int AS recurring
+        count(i.id) FILTER (WHERE i.is_recurring)::int AS recurring,
+        COALESCE(sum(i.quantity * COALESCE(i.estimated_price, i.last_paid_price, 0)) FILTER (WHERE i.status='pending'), 0)::float AS estimated_pending_total,
+        COALESCE(sum(i.quantity * COALESCE(i.last_paid_price, i.estimated_price, 0)) FILTER (WHERE i.status='purchased'), 0)::float AS purchased_total,
+        EXISTS(
+          SELECT 1 FROM billing_subscriptions s
+          WHERE s.status IN ('active','trialing','grace') AND s.period_end > now()
+            AND (s.user_id = l.owner_id OR s.user_id IN (SELECT m2.user_id FROM list_members m2 WHERE m2.list_id = l.id))
+        ) AS has_household_premium
       FROM shopping_lists l LEFT JOIN list_items i ON i.list_id=l.id
       WHERE l.id=ANY($1::uuid[]) GROUP BY l.id`, [listIds]);
     const byId = new Map<string, any>(counts.map((row: any) => [row.id, row]));
@@ -127,6 +135,7 @@ export class ListsService {
       .map((list) => {
         const mine = memberships.find((member) => member.listId === list.id)!;
         const count = byId.get(list.id);
+        const listType = list.listType ?? ListType.NORMAL;
         return {
           id: list.id,
           name: list.name,
@@ -145,6 +154,13 @@ export class ListsService {
           recurringCount: count.recurring,
           createdAt: new Date(list.createdAt).toISOString(),
           updatedAt: new Date(list.updatedAt).toISOString(),
+          listType,
+          budget: list.budget !== null && list.budget !== undefined ? Number(list.budget) : null,
+          currency: list.currency ?? 'MXN',
+          autoSortAisles: list.autoSortAisles ?? true,
+          estimatedPendingTotal: Math.round(Number(count.estimated_pending_total ?? 0) * 100) / 100,
+          purchasedTotal: Math.round(Number(count.purchased_total ?? 0) * 100) / 100,
+          hasHouseholdPremium: Boolean(count.has_household_premium) || listType === ListType.ADVANCED,
         };
       });
   }
@@ -167,12 +183,17 @@ export class ListsService {
     const list = await this.cache.wrap(CacheService.listDetailKey(listId), 30, async () =>
       this.loadDetail(listId),
     );
+    const hasHouseholdPremium = await this.billing.hasHouseholdPremium(listId, (list as ShoppingList).ownerId);
     // `wrap` puede devolver el objeto plano venido de Redis; el mapper lo tolera
-    return toListDetailView(list as ShoppingList, userId);
+    return toListDetailView(list as ShoppingList, userId, new Date(), hasHouseholdPremium);
   }
 
   // ── Escritura ───────────────────────────────────────────────────────
   async create(userId: string, dto: CreateListDto): Promise<ListDetailView> {
+    const requestedType = dto.listType ?? ListType.NORMAL;
+    if (requestedType === ListType.ADVANCED) {
+      await this.billing.assertCanUseAdvancedList(userId);
+    }
     const list = await this.dataSource.transaction(async (manager) => {
       await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))',['capacity:lists:'+userId]);
       await this.billing.assertCapacity(userId,'lists',await manager.count(ShoppingList,{where:{ownerId:userId}}));
@@ -183,6 +204,10 @@ export class ListsService {
           color: dto.color ?? '#0d6efd',
           icon: dto.icon ?? '\u{1F6D2}',
           ownerId: userId,
+          listType: requestedType,
+          budget: requestedType === ListType.ADVANCED && dto.budget !== undefined ? dto.budget : null,
+          currency: dto.currency ?? 'MXN',
+          autoSortAisles: dto.autoSortAisles ?? true,
         }),
       );
       await manager.save(
@@ -207,12 +232,20 @@ export class ListsService {
     await this.assertMember(listId, userId, true);
     const list = await this.lists.findOneOrFail({ where: { id: listId } });
 
+    if (dto.listType === ListType.ADVANCED && list.listType !== ListType.ADVANCED) {
+      await this.billing.assertCanUseAdvancedList(userId, listId);
+    }
+
     Object.assign(list, {
       name: dto.name?.trim() ?? list.name,
       description: dto.description !== undefined ? dto.description?.trim() || null : list.description,
       color: dto.color ?? list.color,
       icon: dto.icon ?? list.icon,
       isArchived: dto.isArchived ?? list.isArchived,
+      listType: dto.listType ?? list.listType,
+      budget: dto.budget !== undefined ? dto.budget : list.budget,
+      currency: dto.currency ?? list.currency,
+      autoSortAisles: dto.autoSortAisles ?? list.autoSortAisles,
     });
     await this.lists.save(list);
     await this.invalidate(listId);

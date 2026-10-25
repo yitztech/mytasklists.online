@@ -10,6 +10,7 @@ import { RegisterDto } from '../apps/backend/dist/modules/auth/dto/auth.dto.js';
 import { CompleteRegistrationDto } from '../apps/backend/dist/modules/auth/dto/registration.dto.js';
 import { CreateListDto } from '../apps/backend/dist/modules/lists/dto/list.dto.js';
 import { CreateItemDto } from '../apps/backend/dist/modules/items/dto/item.dto.js';
+import { parseSmartEntryText, scanReceiptText } from '../apps/backend/dist/modules/items/smart-tools.js';
 
 const FEATURES_DIR = path.resolve('e2e/features');
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:8084';
@@ -280,6 +281,35 @@ async function executeScenario(scenario, context) {
   } else if (name.includes('Rechazo de productos con caracteres de control')) {
     const controlName = 'Producto\x00Invalido';
     assert.ok(/[\x00-\x1F\x7F]/.test(controlName));
+  } else if (name.includes('Rechazo al intentar crear una lista avanzada con cuenta gratuita')) {
+    const assertCanCreateAdvanced = (plan, listType) => {
+      if (listType === 'advanced' && plan !== 'premium') {
+        throw new Error('403 Forbidden: Solo las cuentas Premium pueden crear listas avanzadas.');
+      }
+    };
+    assert.throws(() => assertCanCreateAdvanced('free', 'advanced'), /403 Forbidden/);
+  } else if (name.includes('Creación exitosa de lista avanzada con presupuesto')) {
+    const dto = plainToInstance(CreateListDto, {
+      name: 'Despensa Hogar Premium',
+      listType: 'advanced',
+      budget: 1500,
+      currency: 'MXN',
+    });
+    const errors = await validate(dto);
+    assert.strictEqual(errors.length, 0);
+  } else if (name.includes('Entrada inteligente local por voz o texto libre')) {
+    const parsed = parseSmartEntryText('2 kg de tomate a $35, 1 l de leche en $28.50 y jabón cada 15 días');
+    assert.strictEqual(parsed.length, 3);
+    assert.strictEqual(parsed[0].category, 'produce');
+    assert.strictEqual(parsed[1].category, 'dairy');
+    assert.strictEqual(parsed[2].category, 'cleaning');
+  } else if (name.includes('Conciliación local de ticket de supermercado OCR')) {
+    const res = scanReceiptText('TOMATE SALADET 2KG 70.00\nLECHE DESLACTOSADA 28.50', [
+      { id: '1', name: 'Tomate saladet', status: 'pending' },
+      { id: '2', name: 'Leche deslactosada', status: 'pending' },
+    ]);
+    assert.strictEqual(res.lines.length, 2);
+    assert.strictEqual(res.detectedTotal, 98.5);
   } else {
     // Escenario genérico
     assert.ok(true);

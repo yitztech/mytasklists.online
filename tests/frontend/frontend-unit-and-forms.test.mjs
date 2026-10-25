@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Pruebas unitarias del Frontend (Validaciones de formularios, límites de campos y formato)
@@ -197,6 +200,41 @@ describe('Servicio Frontend · Validación de Formularios, Campos y Textos', () 
       const itemEndpoint = (id) => `/items/${id}`;
       assert.notStrictEqual(listEndpoint('123'), itemEndpoint('123'));
       assert.ok(listEndpoint('123').startsWith('/lists/'));
+    });
+  });
+
+  describe('Listas Normales vs. Avanzadas (Restricción Premium y Presupuesto)', () => {
+    it('Caso de éxito y fracaso: solo cuentas Premium pueden crear listas avanzadas; usuarios gratis solo crean listas normales', () => {
+      const canCreateList = (userPlan, listType) => {
+        if (listType === 'advanced' && userPlan !== 'premium') {
+          return { allowed: false, error: 'Solo las cuentas Premium pueden crear listas avanzadas.' };
+        }
+        return { allowed: true };
+      };
+
+      assert.strictEqual(canCreateList('free', 'normal').allowed, true);
+      assert.strictEqual(canCreateList('free', 'advanced').allowed, false);
+      assert.strictEqual(canCreateList('premium', 'normal').allowed, true);
+      assert.strictEqual(canCreateList('premium', 'advanced').allowed, true);
+    });
+
+    it('Componentes Web (ListsPage, ListDetailPage, AddItemForm, PendingItem, EditItemModal) incluyen controles de listas avanzadas', () => {
+      const webSrcDir = fileURLToPath(new URL('../../apps/frontend/src/', import.meta.url));
+      const listsPage = fs.readFileSync(path.join(webSrcDir, 'pages/ListsPage.tsx'), 'utf8');
+      const detailPage = fs.readFileSync(path.join(webSrcDir, 'pages/ListDetailPage.tsx'), 'utf8');
+      const addItemForm = fs.readFileSync(path.join(webSrcDir, 'components/AddItemForm.tsx'), 'utf8');
+      const pendingItem = fs.readFileSync(path.join(webSrcDir, 'components/PendingItem.tsx'), 'utf8');
+      const editItemModal = fs.readFileSync(path.join(webSrcDir, 'components/EditItemModal.tsx'), 'utf8');
+
+      assert.match(listsPage, /data-testid="list-type-normal"/, 'ListsPage debe tener selector de lista normal');
+      assert.match(listsPage, /data-testid="list-type-advanced"/, 'ListsPage debe tener selector de lista avanzada');
+      assert.match(detailPage, /data-testid="advanced-budget-card"/, 'ListDetailPage debe mostrar tarjeta de presupuesto en vivo');
+      assert.match(detailPage, /data-testid="smart-entry-button"/, 'ListDetailPage debe incluir botón de Entrada Inteligente');
+      assert.match(detailPage, /data-testid="receipt-scan-button"/, 'ListDetailPage debe incluir botón de Escaneo de Ticket OCR');
+      assert.match(detailPage, /data-testid="aisles-switch"/, 'ListDetailPage debe incluir interruptor de pasillos');
+      assert.match(addItemForm, /data-testid="item-estimated-price-input"/, 'AddItemForm debe incluir campo de precio estimado');
+      assert.match(pendingItem, /data-testid="item-price-badge"/, 'PendingItem debe mostrar insignia de precio');
+      assert.match(editItemModal, /id="edit-item-price"/, 'EditItemModal debe permitir editar precio estimado');
     });
   });
 

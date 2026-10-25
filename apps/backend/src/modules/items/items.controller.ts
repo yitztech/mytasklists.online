@@ -20,7 +20,14 @@ import {
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ItemsService } from './items.service';
-import { CreateItemDto, ReorderItemsDto, UpdateItemDto } from './dto/item.dto';
+import {
+  CreateItemDto,
+  ReceiptApplyDto,
+  ReceiptScanDto,
+  ReorderItemsDto,
+  SmartEntryDto,
+  UpdateItemDto,
+} from './dto/item.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../common/types';
 import { ItemStatus } from '../../database/entities';
@@ -85,6 +92,39 @@ export class ItemsController {
     @Body() dto: CreateItemDto,
   ) {
     return this.items.create(listId, user.id, dto);
+  }
+
+  @Post('lists/:listId/items/smart-entry')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Analiza y crea múltiples productos desde texto libre o dictado por voz (listas avanzadas)' })
+  smartEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('listId', ParseUUIDPipe) listId: string,
+    @Body() dto: SmartEntryDto,
+  ) {
+    return this.items.smartEntry(listId, user.id, dto);
+  }
+
+  @Post('lists/:listId/receipts/scan')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Analiza el texto de un ticket de compra y propone coincidencias (listas avanzadas)' })
+  scanReceipt(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('listId', ParseUUIDPipe) listId: string,
+    @Body() dto: ReceiptScanDto,
+  ) {
+    return this.items.scanReceipt(listId, user.id, dto);
+  }
+
+  @Post('lists/:listId/receipts/apply')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Aplica las compras detectadas en el ticket y ajusta la recurrencia automáticamente' })
+  applyReceipt(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('listId', ParseUUIDPipe) listId: string,
+    @Body() dto: ReceiptApplyDto,
+  ) {
+    return this.items.applyReceipt(listId, user.id, dto);
   }
 
   @Patch('lists/:listId/items/reorder')

@@ -5,9 +5,13 @@ import type {
   AuthProviders,
   AuthResponse,
   Item,
-  LoginResponse,
   ListDetail,
   ListSummary,
+  ListType,
+  LoginResponse,
+  ReceiptApplyResponse,
+  ReceiptScanResponse,
+  SmartEntryResponse,
   User,
 } from '../types';
 
@@ -50,8 +54,16 @@ export const listsApi = {
   revokeInvitation: (id: string, invitationId: string) => api.delete<{ok:true}>(`/lists/${id}/invitations/${invitationId}`),
   all: () => api.get<ListSummary[]>('/lists'),
   detail: (id: string) => api.get<ListDetail>(`/lists/${id}`),
-  create: (payload: { name: string; description?: string; color?: string; icon?: string }) =>
-    api.post<ListDetail>('/lists', payload),
+  create: (payload: {
+    name: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+    listType?: ListType;
+    budget?: number | null;
+    currency?: string;
+    autoSortAisles?: boolean;
+  }) => api.post<ListDetail>('/lists', payload),
   update: (id: string, payload: Record<string, unknown>) =>
     api.patch<ListDetail>(`/lists/${id}`, payload),
   remove: (id: string) => api.delete<{ ok: boolean }>(`/lists/${id}`),
@@ -74,8 +86,19 @@ export const itemsApi = {
       category?: string;
       isRecurring?: boolean;
       recurrenceDays?: number;
+      estimatedPrice?: number | null;
+      lastPaidPrice?: number | null;
+      storeName?: string | null;
     },
   ) => api.post<Item>(`/lists/${listId}/items`, payload),
+  smartEntry: (listId: string, payload: { text: string; autoCreate?: boolean }) =>
+    api.post<SmartEntryResponse>(`/lists/${listId}/items/smart-entry`, payload),
+  scanReceipt: (listId: string, receiptText: string) =>
+    api.post<ReceiptScanResponse>(`/lists/${listId}/receipts/scan`, { receiptText }),
+  applyReceipt: (
+    listId: string,
+    matches: { itemId: string; paidPrice?: number | null; suggestedRecurrenceDays?: number | null }[],
+  ) => api.post<ReceiptApplyResponse>(`/lists/${listId}/receipts/apply`, { matches }),
   update: (itemId: string, payload: Record<string, unknown>) =>
     api.patch<Item>(`/items/${itemId}`, payload),
   uploadImage: (itemId: string, image: FormData) => api.post<Item>(`/items/${itemId}/image`, image),
