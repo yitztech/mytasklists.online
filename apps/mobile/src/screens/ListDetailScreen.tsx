@@ -290,6 +290,7 @@ export function ListDetailScreen({ route, navigation }: any) {
       contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 + insets.bottom }}
       testID="list-detail-screen"
       keyboardShouldPersistTaps="handled"
+      scrollEnabled={!draggingItem}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -533,7 +534,7 @@ export function ListDetailScreen({ route, navigation }: any) {
       <View testID="pending-list" style={list.pending.length > 0 ? styles.sheet : undefined}>
         {isAdvancedList(list) && list.autoSortAisles
           ? groupItemsByAisle(list.pending).map((group) => (
-              <View key={group.aisle} testID="aisle-group">
+              <View key={group.aisle} testID="aisle-group" style={{ gap: spacing.sm }}>
                 <Text style={styles.aisleHeader}>
                   {group.icon} {group.aisle}
                 </Text>
@@ -703,12 +704,7 @@ export function ListDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   sheet: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    overflow: 'hidden',
-    ...shadow.card,
+    gap: spacing.sm,
   },
   addCard: {
     backgroundColor: colors.surface,

@@ -1,8 +1,8 @@
 import React, { useRef } from 'react';
-import { Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Badge, CheckGlyph, CrossGlyph, GripVerticalGlyph, PencilGlyph } from './ui';
-import { colors, spacing } from '../theme';
+import { colors, radius, shadow, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { formatItemTotal } from '../utils/aisles';
@@ -49,29 +49,46 @@ export function PurchasedRow({
 }: Props) {
   const { t, i18n } = useTranslation();
   const localizedUnit = unitLabel(item.unit, i18n.language);
+  const dragY = useRef(new Animated.Value(0)).current;
+  const lastStepY = useRef(0);
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 10,
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
+      onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dy) > 8,
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
         if (disabled) return;
+        lastStepY.current = 0;
+        dragY.setValue(0);
         onDragStartItem?.(item.id);
       },
       onPanResponderMove: (_, gesture) => {
         if (disabled) return;
-        if (gesture.dy < -35) {
+        const currentDelta = gesture.dy - lastStepY.current;
+        dragY.setValue(currentDelta);
+        const STEP_THRESHOLD = 50;
+        if (currentDelta < -STEP_THRESHOLD) {
+          lastStepY.current = gesture.dy;
+          Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
           onMoveItem?.(item.id, -1);
-          gesture.dy = 0;
-        } else if (gesture.dy > 35) {
+        } else if (currentDelta > STEP_THRESHOLD) {
+          lastStepY.current = gesture.dy;
+          Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
           onMoveItem?.(item.id, 1);
-          gesture.dy = 0;
         }
       },
-      onPanResponderRelease: () => {
+      onPanResponderRelease: (_, gesture) => {
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
         onDragEndItem?.();
+        if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+          onMoveItem?.(item.id, -1);
+        }
       },
       onPanResponderTerminate: () => {
+        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
         onDragEndItem?.();
       },
     }),
@@ -100,13 +117,16 @@ export function PurchasedRow({
       : {};
 
   return (
-    <View
+    <Animated.View
       {...webDragProps}
       style={[
         styles.row,
         !first && styles.divided,
         isDragging && styles.rowDragging,
         isDragOver && styles.rowDragOver,
+        {
+          transform: [{ translateY: isDragging ? dragY : 0 }],
+        },
       ]}
       testID="purchased-item"
     >
@@ -181,7 +201,7 @@ export function PurchasedRow({
           <CrossGlyph size={14} color={colors.inkSoft} />
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -192,29 +212,33 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 60,
     backgroundColor: '#fafbf9',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
     paddingVertical: 10,
     paddingHorizontal: spacing.lg,
+    ...shadow.card,
   },
   rowDragging: {
-    opacity: 0.6,
+    opacity: 0.85,
     backgroundColor: '#edf7f2',
     borderColor: colors.brand,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: 8,
-    elevation: 4,
+    borderRadius: radius.lg,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    zIndex: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    zIndex: 999,
   },
   rowDragOver: {
-    borderTopWidth: 3,
-    borderTopColor: colors.brand,
+    borderWidth: 2,
+    borderColor: colors.brand,
     backgroundColor: '#edf7f2',
   },
-  divided: { borderTopWidth: 1, borderTopColor: colors.line },
+  divided: {},
   checkbox: {
     width: 26,
     height: 26,
