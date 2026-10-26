@@ -13,6 +13,7 @@ import { PendingItem } from '../components/PendingItem';
 import { PurchasedItem } from '../components/PurchasedItem';
 import { ShareModal } from '../components/ShareModal';
 import { formatSampleReceiptFromItems, getListCurrency, isAdvancedList } from '../utils/aisles';
+import { isPendingSection, SECTION_PENDING, SECTION_PURCHASED } from '../i18n/ui-helpers';
 import type { Item, ListDetail, ReceiptLineMatch } from '../types';
 import { EditItemModal } from '../components/EditItemModal';
 
@@ -35,6 +36,8 @@ export function ListDetailPage() {
   const [showReceiptScan, setShowReceiptScan] = useState(false);
   const [receiptText, setReceiptText] = useState('');
   const [receiptMatches, setReceiptMatches] = useState<ReceiptLineMatch[] | null>(null);
+  const [draggingItem, setDraggingItem] = useState<{ section: 'pending' | 'purchased'; id: string } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ section: 'pending' | 'purchased'; id: string } | null>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const reloadTimer = useRef<number | null>(null);
   const [showDates, setShowDates] = useState(() => {
@@ -190,6 +193,51 @@ export function ListDetailPage() {
       if (!list) return;
       await listsApi.update(id, { autoSortAisles: !(list.autoSortAisles ?? true) });
     }, t('detail.loadFailed'));
+
+  const reorderSectionItems = useCallback(
+    async (section: 'pending' | 'purchased', fromId: string, toId: string) => {
+      if (!list || fromId === toId) return;
+      const sourceItems = isPendingSection(section) ? list.pending : list.purchased;
+      const fromIndex = sourceItems.findIndex((item) => item.id === fromId);
+      const toIndex = sourceItems.findIndex((item) => item.id === toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+      const reordered = [...sourceItems];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const nextIds = reordered.map((item) => item.id);
+
+      setList((current) =>
+        current
+          ? {
+              ...current,
+              [section]: reordered.map((item, idx) => ({ ...item, sortOrder: idx })),
+            }
+          : current,
+      );
+
+      try {
+        await itemsApi.reorder(list.id, nextIds);
+        await load();
+      } catch (err) {
+        notify(err instanceof ApiError ? err.message : t('detail.loadFailed'), false);
+        await load();
+      }
+    },
+    [list, load, t],
+  );
+
+  const moveSectionItemByStep = useCallback(
+    (section: 'pending' | 'purchased', itemId: string, direction: -1 | 1) => {
+      if (!list) return;
+      const sourceItems = isPendingSection(section) ? list.pending : list.purchased;
+      const index = sourceItems.findIndex((item) => item.id === itemId);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= sourceItems.length) return;
+      void reorderSectionItems(section, itemId, sourceItems[targetIndex].id);
+    },
+    [list, reorderSectionItems],
+  );
 
   const toggleVoiceDictation = () => {
     if (listening && recognitionRef.current) {
@@ -654,10 +702,25 @@ export function ListDetailPage() {
                 currency={listCurrency}
                 disabled={busy}
                 showDates={showDates}
+                isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
+                isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
                 onPurchase={purchase}
                 onDelete={remove}
                 onAdvanceClock={advanceClock}
                 onEdit={setEditingItem}
+                onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
+                onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
+                onDropItem={(targetItemId, draggedItemId) => {
+                  const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PENDING ? draggingItem.id : '');
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                  if (sourceId) void reorderSectionItems(SECTION_PENDING, sourceId, targetItemId);
+                }}
+                onDragEndItem={() => {
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                }}
+                onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
               />
             ))}
           </ul>
@@ -685,9 +748,24 @@ export function ListDetailPage() {
                 item={item}
                 disabled={busy}
                 showDates={showDates}
+                isDragging={draggingItem?.section === SECTION_PURCHASED && draggingItem.id === item.id}
+                isDragOver={dragOverItem?.section === SECTION_PURCHASED && dragOverItem.id === item.id}
                 onRestore={restore}
                 onClose={close}
                 onEdit={setEditingItem}
+                onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PURCHASED, id: itemId })}
+                onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PURCHASED, id: itemId })}
+                onDropItem={(targetItemId, draggedItemId) => {
+                  const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PURCHASED ? draggingItem.id : '');
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                  if (sourceId) void reorderSectionItems(SECTION_PURCHASED, sourceId, targetItemId);
+                }}
+                onDragEndItem={() => {
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                }}
+                onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PURCHASED, itemId, direction)}
               />
             ))}
           </ul>

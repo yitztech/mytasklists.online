@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Brand } from './Brand';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -18,10 +18,7 @@ export function Layout() {
   const { user, logout } = useAuth();
   const { connected, notifications } = useSocket();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { t } = useTranslation();
-  // El detalle de una lista cuelga de "Mis listas": que la pestaña siga marcada
-  const listsActive = pathname.startsWith('/lists/');
 
   const handleLogout = async () => {
     await logout();
@@ -33,24 +30,6 @@ export function Layout() {
       <header className="lc-topbar">
         <div className="container lc-shell lc-topbar-inner">
           <Brand to="/" />
-
-          {/* Escritorio: pestañas en la barra. Teléfono: barra inferior (ver app.css) */}
-          <nav className="lc-nav" aria-label={t('layout.mainNav')}>
-            <ul>
-              <li>
-                <NavLink to="/" end className={listsActive ? 'active' : undefined} data-testid="nav-lists">
-                  <i className="bi bi-card-checklist" aria-hidden="true" />
-                  {t('layout.lists')}
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/settings" data-testid="nav-settings">
-                  <i className="bi bi-person-circle" aria-hidden="true" />
-                  {t('layout.account')}
-                </NavLink>
-              </li>
-            </ul>
-          </nav>
 
           <div className="d-flex align-items-center gap-2 gap-md-3">
             <span

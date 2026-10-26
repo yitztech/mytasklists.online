@@ -310,6 +310,21 @@ async function executeScenario(scenario, context) {
     ]);
     assert.strictEqual(res.lines.length, 2);
     assert.strictEqual(res.detectedTotal, 98.5);
+  } else if (name.includes('Reordenamiento por arrastrar y soltar en listas normales y avanzadas')) {
+    const items = [
+      { id: 'item-1', name: 'Manzanas', sortOrder: 0 },
+      { id: 'item-2', name: 'Pan', sortOrder: 1 },
+      { id: 'item-3', name: 'Queso', sortOrder: 2 },
+    ];
+    const reorder = (list, fromIdx, toIdx) => {
+      const copy = [...list];
+      const [moved] = copy.splice(fromIdx, 1);
+      copy.splice(toIdx, 0, moved);
+      return copy.map((it, idx) => ({ ...it, sortOrder: idx }));
+    };
+    const reordered = reorder(items, 2, 0);
+    assert.deepStrictEqual(reordered.map((i) => i.id), ['item-3', 'item-1', 'item-2']);
+    assert.strictEqual(reordered[0].sortOrder, 0);
   } else {
     // Escenario genérico
     assert.ok(true);

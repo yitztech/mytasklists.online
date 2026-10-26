@@ -84,6 +84,7 @@ test.describe('Landing · página pública de descargas', () => {
     await expect(policy.locator('#eliminar')).toContainText('Eliminar mi cuenta');
     await expect(policy).not.toContainText('__');
 
+    await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-en').click();
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(page.getByTestId('privacy-policy').getByRole('heading', { level: 1 })).toHaveText('Privacy policy');
@@ -97,6 +98,7 @@ test.describe('Landing · página pública de descargas', () => {
     await expect(terms.locator('#quienes')).toContainText('MyTaskListsOnline');
     await expect(terms).not.toContainText('__');
 
+    await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-en').click();
     await expect(page).toHaveURL(/\/terms$/);
     await expect(page.getByTestId('terms-of-service').getByRole('heading', { level: 1 })).toHaveText('Terms of service');

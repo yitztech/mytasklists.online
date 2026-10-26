@@ -254,6 +254,20 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
       assert.match(i18nSource, /LANGUAGE_FLAGS/, 'i18n/index.ts debe definir las banderas por idioma');
       assert.match(switcherSource, /LANGUAGE_FLAGS\[language\]/, 'LanguageSwitcher debe mostrar la bandera junto al nombre del idioma');
       assert.match(switcherSource, /✓/, 'LanguageSwitcher debe mostrar marca de selección en el idioma activo');
+      assert.match(switcherSource, /testID="language-switcher-trigger"/, 'LanguageSwitcher debe mostrar botón compacto con código de idioma');
+      assert.match(switcherSource, /FlagBadge/, 'LanguageSwitcher debe mostrar banderas enmarcadas para cada idioma soportado');
+    });
+
+    it('ItemRow.tsx, PurchasedRow.tsx y ListDetailScreen.tsx incluyen animación pausada al completar y reordenamiento de elementos', () => {
+      const itemRowSource = fs.readFileSync(path.join(mobileSrcDir, 'components/ItemRow.tsx'), 'utf8');
+      const purchasedRowSource = fs.readFileSync(path.join(mobileSrcDir, 'components/PurchasedRow.tsx'), 'utf8');
+      const detailSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListDetailScreen.tsx'), 'utf8');
+
+      assert.match(itemRowSource, /COMPLETION_ANIMATION_MS = 600/, 'ItemRow debe animar el completado durante 600ms');
+      assert.match(itemRowSource, /Animated\.parallel/, 'ItemRow debe ejecutar transición animada al marcar tarea completada');
+      assert.match(itemRowSource, /testID="item-drag-handle"/, 'ItemRow debe incluir manejador para reordenar');
+      assert.match(purchasedRowSource, /testID="item-drag-handle"/, 'PurchasedRow debe incluir manejador para reordenar');
+      assert.match(detailSource, /itemsApi\.reorder/, 'ListDetailScreen debe persistir el reordenamiento en todos los tipos de listas');
     });
   });
 

@@ -236,6 +236,27 @@ describe('Servicio Frontend · Validación de Formularios, Campos y Textos', () 
       assert.match(pendingItem, /data-testid="item-price-badge"/, 'PendingItem debe mostrar insignia de precio');
       assert.match(editItemModal, /id="edit-item-price"/, 'EditItemModal debe permitir editar precio estimado');
     });
+
+    it('Animación visible al completar tarea, selector de idiomas compacto con banderas y drag & drop en todas las listas', () => {
+      const webSrcDir = fileURLToPath(new URL('../../apps/frontend/src/', import.meta.url));
+      const pendingItem = fs.readFileSync(path.join(webSrcDir, 'components/PendingItem.tsx'), 'utf8');
+      const purchasedItem = fs.readFileSync(path.join(webSrcDir, 'components/PurchasedItem.tsx'), 'utf8');
+      const detailPage = fs.readFileSync(path.join(webSrcDir, 'pages/ListDetailPage.tsx'), 'utf8');
+      const listsPage = fs.readFileSync(path.join(webSrcDir, 'pages/ListsPage.tsx'), 'utf8');
+      const langSwitcher = fs.readFileSync(path.join(webSrcDir, 'components/LanguageSwitcher.tsx'), 'utf8');
+      const uiHelpers = fs.readFileSync(path.join(webSrcDir, 'i18n/ui-helpers.ts'), 'utf8');
+      const appCss = fs.readFileSync(path.join(webSrcDir, 'styles/app.css'), 'utf8');
+
+      assert.match(pendingItem, /COMPLETION_ANIMATION_MS = 600/, 'PendingItem debe reproducir animación pausada antes de mover a comprados');
+      assert.match(uiHelpers, /lc-item--completando/, 'ui-helpers debe definir clase lc-item--completando para animación al completar');
+      assert.match(appCss, /@keyframes lc-item-complete-sweep/, 'app.css debe definir keyframes de completado');
+      assert.match(langSwitcher, /data-testid="language-switcher-trigger"/, 'LanguageSwitcher debe mostrar botón compacto con código de idioma');
+      assert.match(langSwitcher, /data-testid="language-switcher-menu"/, 'LanguageSwitcher debe desplegar menú de idiomas con banderas');
+      assert.match(pendingItem, /data-testid="item-drag-handle"/, 'PendingItem debe incluir control de arrastre');
+      assert.match(purchasedItem, /data-testid="item-drag-handle"/, 'PurchasedItem debe incluir control de arrastre');
+      assert.match(detailPage, /itemsApi\.reorder/, 'ListDetailPage debe persistir el nuevo orden mediante itemsApi.reorder');
+      assert.match(listsPage, /reorderLists/, 'ListsPage debe permitir reordenar tarjetas de listas arrastrándolas');
+    });
   });
 
 });

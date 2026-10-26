@@ -35,6 +35,7 @@ import {
   isAdvancedList,
   isOverBudget,
 } from '../utils/aisles';
+import { isPendingSection, SECTION_PENDING, SECTION_PURCHASED } from '../i18n/ui-helpers';
 import { itemImageForm } from '../utils/item-image';
 import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -73,6 +74,8 @@ export function ListDetailScreen({ route, navigation }: any) {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [showDates, setShowDates] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [draggingItem, setDraggingItem] = useState<{ section: 'pending' | 'purchased'; id: string } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ section: 'pending' | 'purchased'; id: string } | null>(null);
 
   useLayoutEffect(() => {
     if (list?.ownerId === user?.id) {
@@ -224,6 +227,51 @@ export function ListDetailScreen({ route, navigation }: any) {
       Alert.alert(t('advancedList.receiptTitle'), t('advancedList.receiptDone', { count: res.purchasedCount }));
     });
   };
+
+  const reorderSectionItems = useCallback(
+    async (section: 'pending' | 'purchased', fromId: string, toId: string) => {
+      if (!list || fromId === toId) return;
+      const sourceItems = isPendingSection(section) ? list.pending : list.purchased;
+      const fromIndex = sourceItems.findIndex((item) => item.id === fromId);
+      const toIndex = sourceItems.findIndex((item) => item.id === toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+      const reordered = [...sourceItems];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const nextIds = reordered.map((item) => item.id);
+
+      setList((current) =>
+        current
+          ? {
+              ...current,
+              [section]: reordered.map((item, idx) => ({ ...item, sortOrder: idx })),
+            }
+          : current,
+      );
+
+      try {
+        await itemsApi.reorder(listId, nextIds);
+        await load();
+      } catch (error) {
+        Alert.alert(t('common.oops'), (error as Error).message);
+        await load();
+      }
+    },
+    [list, listId, load, t],
+  );
+
+  const moveSectionItemByStep = useCallback(
+    (section: 'pending' | 'purchased', itemId: string, direction: -1 | 1) => {
+      if (!list) return;
+      const sourceItems = isPendingSection(section) ? list.pending : list.purchased;
+      const index = sourceItems.findIndex((item) => item.id === itemId);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= sourceItems.length) return;
+      void reorderSectionItems(section, itemId, sourceItems[targetIndex].id);
+    },
+    [list, reorderSectionItems],
+  );
 
   if (!list) {
     return (
@@ -497,8 +545,23 @@ export function ListDetailScreen({ route, navigation }: any) {
                     disabled={busy}
                     showDates={showDates}
                     showPrice={isAdvancedList(list)}
+                    isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
+                    isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
                     onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
                     onEdit={setEditingItem}
+                    onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
+                    onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
+                    onDropItem={(targetItemId, draggedItemId) => {
+                      const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PENDING ? draggingItem.id : '');
+                      setDraggingItem(null);
+                      setDragOverItem(null);
+                      if (sourceId) void reorderSectionItems(SECTION_PENDING, sourceId, targetItemId);
+                    }}
+                    onDragEndItem={() => {
+                      setDraggingItem(null);
+                      setDragOverItem(null);
+                    }}
+                    onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
                   />
                 ))}
               </View>
@@ -511,8 +574,23 @@ export function ListDetailScreen({ route, navigation }: any) {
             disabled={busy}
             showDates={showDates}
             showPrice={isAdvancedList(list)}
+            isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
+            isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
             onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
             onEdit={setEditingItem}
+            onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
+            onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
+            onDropItem={(targetItemId, draggedItemId) => {
+              const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PENDING ? draggingItem.id : '');
+              setDraggingItem(null);
+              setDragOverItem(null);
+              if (sourceId) void reorderSectionItems(SECTION_PENDING, sourceId, targetItemId);
+            }}
+            onDragEndItem={() => {
+              setDraggingItem(null);
+              setDragOverItem(null);
+            }}
+            onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
             onLongPress={(target: Item) =>
               Alert.alert(target.name, t('detail.whatToDo'), [
                 { text: t('common.cancel'), style: 'cancel' },
@@ -553,9 +631,24 @@ export function ListDetailScreen({ route, navigation }: any) {
                 disabled={busy}
                 showDates={showDates}
                 showPrice={isAdvancedList(list)}
+                isDragging={draggingItem?.section === SECTION_PURCHASED && draggingItem.id === item.id}
+                isDragOver={dragOverItem?.section === SECTION_PURCHASED && dragOverItem.id === item.id}
                 onRestore={(target) => guard(() => itemsApi.restore(target.id))}
                 onClose={(target) => guard(() => itemsApi.close(target.id))}
                 onEdit={setEditingItem}
+                onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PURCHASED, id: itemId })}
+                onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PURCHASED, id: itemId })}
+                onDropItem={(targetItemId, draggedItemId) => {
+                  const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PURCHASED ? draggingItem.id : '');
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                  if (sourceId) void reorderSectionItems(SECTION_PURCHASED, sourceId, targetItemId);
+                }}
+                onDragEndItem={() => {
+                  setDraggingItem(null);
+                  setDragOverItem(null);
+                }}
+                onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PURCHASED, itemId, direction)}
               />
             ))}
           </View>

@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
 import { getAisleLabelKey } from '../utils/aisles';
+import {
+  getDragHandleClass,
+  getPendingItemClass,
+  KEY_ARROW_DOWN,
+  KEY_ARROW_UP,
+  toBooleanAttr,
+} from '../i18n/ui-helpers';
+
+export const COMPLETION_ANIMATION_MS = 600;
 
 interface Props {
   item: Item;
@@ -13,10 +22,17 @@ interface Props {
   disabled?: boolean;
   /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
   showDates?: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
   onPurchase: (item: Item) => void;
   onDelete: (item: Item) => void;
   onAdvanceClock: (item: Item, days: number) => void;
   onEdit: (item: Item) => void;
+  onDragStartItem?: (itemId: string) => void;
+  onDragOverItem?: (itemId: string) => void;
+  onDropItem?: (targetItemId: string, draggedItemId?: string) => void;
+  onDragEndItem?: () => void;
+  onMoveItem?: (itemId: string, direction: -1 | 1) => void;
 }
 
 const formatQuantity = (item: Item, language: string): string =>
@@ -30,12 +46,38 @@ const formatQuantity = (item: Item, language: string): string =>
  *  · azul  → recurrente dentro de su plazo
  *  · rojo  → recurrente vencido (pasó su plazo sin comprarse)
  */
-export function PendingItem({ item, isAdvanced, currency, disabled, showDates, onPurchase, onDelete, onAdvanceClock, onEdit }: Props) {
+export function PendingItem({
+  item,
+  isAdvanced,
+  currency,
+  disabled,
+  showDates,
+  isDragging,
+  isDragOver,
+  onPurchase,
+  onDelete,
+  onAdvanceClock,
+  onEdit,
+  onDragStartItem,
+  onDragOverItem,
+  onDropItem,
+  onDragEndItem,
+  onMoveItem,
+}: Props) {
   const { t, i18n } = useTranslation();
-  const [busy, setBusy] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const timerRef = useRef<number | null>(null);
   const unitPrice = item.estimatedPrice ?? item.lastPaidPrice ?? null;
   const lineTotal = unitPrice !== null ? (item.quantity * unitPrice).toFixed(2) : null;
   const aisleLabelKey = isAdvanced ? getAisleLabelKey(item.category) : null;
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const stateClass = item.isOverdue
     ? 'lc-item--vencido'
@@ -44,27 +86,68 @@ export function PendingItem({ item, isAdvanced, currency, disabled, showDates, o
       : 'lc-item--unico';
 
   const handlePurchase = () => {
-    if (disabled || busy) return;
-    setBusy(true);
-    onPurchase(item);
-    window.setTimeout(() => setBusy(false), 600);
+    if (disabled || completing) return;
+    setCompleting(true);
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      onPurchase(item);
+      setCompleting(false);
+    }, COMPLETION_ANIMATION_MS);
   };
 
   return (
     <li
-      className={`lc-item ${stateClass}`}
+      className={getPendingItemClass(stateClass, completing, isDragging, isDragOver)}
       data-testid="pending-item"
       data-item-id={item.id}
       data-item-name={item.name}
       data-recurring={item.isRecurring ? 'true' : 'false'}
       data-overdue={item.isOverdue ? 'true' : 'false'}
+      data-completing={toBooleanAttr(completing)}
+      draggable={!disabled && !completing}
+      onDragStart={(event) => {
+        if (disabled || completing) return;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', item.id);
+        onDragStartItem?.(item.id);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        onDragOverItem?.(item.id);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const fromId = event.dataTransfer.getData('text/plain') || undefined;
+        onDropItem?.(item.id, fromId);
+      }}
+      onDragEnd={() => onDragEndItem?.()}
     >
+      <button
+        type="button"
+        className={getDragHandleClass(isDragging)}
+        disabled={disabled || completing}
+        aria-label={item.name}
+        data-testid="item-drag-handle"
+        onKeyDown={(event) => {
+          if (event.key === KEY_ARROW_UP) {
+            event.preventDefault();
+            onMoveItem?.(item.id, -1);
+          } else if (event.key === KEY_ARROW_DOWN) {
+            event.preventDefault();
+            onMoveItem?.(item.id, 1);
+          }
+        }}
+      >
+        <i className="bi bi-grip-vertical" aria-hidden="true" />
+      </button>
+
       <input
         type="checkbox"
         className="lc-check"
-        checked={false}
+        checked={completing}
         onChange={handlePurchase}
-        disabled={disabled || busy}
+        disabled={disabled || completing}
         aria-label={t('item.markPurchased', { name: item.name })}
         data-testid="item-checkbox"
       />
@@ -132,7 +215,7 @@ export function PendingItem({ item, isAdvanced, currency, disabled, showDates, o
       </div>
 
       <div className="d-flex align-items-center gap-1 flex-shrink-0">
-        <button className="lc-icon-btn" type="button" onClick={() => onEdit(item)} disabled={disabled} aria-label={`${t('item.edit')}: ${item.name}`} data-testid="item-edit"><i className="bi bi-pencil" aria-hidden="true" /></button>
+        <button className="lc-icon-btn" type="button" onClick={() => onEdit(item)} disabled={disabled || completing} aria-label={`${t('item.edit')}: ${item.name}`} data-testid="item-edit"><i className="bi bi-pencil" aria-hidden="true" /></button>
         {item.isRecurring && (
           <div className="dropdown">
             <button
@@ -169,7 +252,7 @@ export function PendingItem({ item, isAdvanced, currency, disabled, showDates, o
           className="lc-icon-btn lc-icon-btn--danger"
           type="button"
           onClick={() => onDelete(item)}
-          disabled={disabled}
+          disabled={disabled || completing}
           aria-label={t('item.delete', { name: item.name })}
           data-testid="item-delete"
         >

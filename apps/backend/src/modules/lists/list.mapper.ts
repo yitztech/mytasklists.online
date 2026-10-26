@@ -44,7 +44,11 @@ export const toListDetailView = (
 
   const purchased = items
     .filter((item) => item.status === ItemStatus.PURCHASED)
-    .sort((a, b) => +new Date(b.purchasedAt ?? b.updatedAt) - +new Date(a.purchasedAt ?? a.updatedAt))
+    .sort(
+      (a, b) =>
+        a.sortOrder - b.sortOrder ||
+        +new Date(b.purchasedAt ?? b.updatedAt) - +new Date(a.purchasedAt ?? a.updatedAt),
+    )
     .map((item) => toItemView(item, now));
 
   const estimatedPendingTotal =
