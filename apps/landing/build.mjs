@@ -94,5 +94,8 @@ for(const [es,en] of legal) for(const name of [es,en]) {
 }
 const urls=[...new Set(LOCALES.flatMap(code=>[ROUTES[code].home,ROUTES[code].pricing,ROUTES[code].download])),'/privacidad','/privacy','/terminos','/terms'];
 await writeFile(join(OUT,'sitemap.xml'),`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(path=>`<url><loc>${escape(origin+path)}</loc></url>`).join('')}</urlset>`);
-await writeFile(join(OUT,'robots.txt'),process.env.LANDING_NOINDEX==='true'?'User-agent: *\nDisallow: /\n':`User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
+// Sin Disallow: lo privado (API, app, panel) lleva X-Robots-Tag: noindex desde el gateway y, con
+// LANDING_NOINDEX, cada página su meta noindex. Una URL bloqueada que tiene enlaces se indexa sin que
+// Google pueda leer su noindex (AGENTS.md §9.2).
+await writeFile(join(OUT,'robots.txt'),process.env.LANDING_NOINDEX==='true'?'User-agent: *\nAllow: /\n':`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
 console.log(`[landing] ${LOCALES.join('/').toUpperCase()}, pricing, downloads and SEO generated`);

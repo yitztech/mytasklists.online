@@ -56,6 +56,7 @@ server {
     location /api/auth/ {
         limit_req zone=auth_zone burst=10 nodelay;
         include /etc/nginx/snippets/proxy-headers.conf;
+        include /etc/nginx/snippets/noindex.conf;
         proxy_read_timeout 60s;
         proxy_pass http://backend_upstream;
     }
