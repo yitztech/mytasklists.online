@@ -22,3 +22,8 @@ Característica: Listas Normales vs. Avanzadas (Pilar Financiero, Hogar Premium,
     Cuando el usuario escanea y aplica el ticket con líneas "TOMATE SALADET 2KG 70.00" y "LECHE DESLACTOSADA 28.50"
     Entonces los productos coincidentes pasan a estado "purchased" con su último precio real pagado
     Y se ajusta automáticamente la frecuencia de recurrencia según el consumo real
+
+  Escenario: Reordenamiento por arrastrar y soltar en listas normales y avanzadas (Éxito)
+    Dado una lista con productos pendientes y comprados en orden inicial
+    Cuando el usuario arrastra un producto a una nueva posición
+    Entonces el sistema actualiza sortOrder y conserva el nuevo orden en todo tipo de listas

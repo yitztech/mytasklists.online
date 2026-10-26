@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CATALOGS } from './translations.mjs';
+import { renderLanguageSwitcher as renderSwitcher } from './i18n/switcher.mjs';
 const SRC = new URL('./src/', import.meta.url).pathname;
 const OUT = new URL('./dist/', import.meta.url).pathname;
 const origin = (process.env.LANDING_PUBLIC_URL || 'https://mytasklists.online').replace(/\/$/,'');
@@ -26,11 +27,7 @@ const replace = (s,locale='es') => {
   return s.replace(/(href|src)="\.\//g,'$1="/');
 };
 
-/** Selector con un enlace por idioma hacia la misma página */
-const languageLinks = (locale,page) => LOCALES.map(code=>{
-  const current = code===locale&&'aria-current="page"';
-  return `<a href="${ROUTES[code][page]}" data-lang="${code}" data-testid="language-${code}" lang="${code}" hreflang="${code}" ${current||''}>${code.toUpperCase()}</a>`;
-}).join('');
+const renderLanguageSwitcher = (locale, page) => renderSwitcher(locale, page, { catalogs: CATALOGS, routes: ROUTES, locales: LOCALES });
 
 /** alternates: idioma → ruta de la misma página en ese idioma */
 const seo = (html,locale,alternates,title,description) => {
@@ -66,7 +63,7 @@ const shell=(locale,page,title,body,script='')=>{
   // Bloque de datos, no ejecutable: la CSP solo permite scripts propios.
   const copy = script ? `<script type="application/json" id="landing-copy">${JSON.stringify(Object.fromEntries(Object.entries(t).filter(([key])=>key.startsWith('download.')))).replace(/</g,'\\u003c')}</script>` : '';
   return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${title}</title><meta name="description" content="${title}"/><link rel="icon" href="/favicon.svg"/><link rel="stylesheet" href="/styles.css"/></head><body>
-<header class="nav commerce-nav"><div class="wrap"><a class="brand" href="${route.home}">MyTaskLists</a><nav class="nav-links" aria-label="${escape(t['nav.main'])}"><a href="${route.pricing}">${t['nav.pricing']}</a><a href="${route.download}">${t['nav.download']}</a><a class="btn btn-ghost" href="__LOGIN_URL__">${t['commerce.signIn']}</a><div class="lang" role="group" aria-label="${escape(t['language.label'])}" data-testid="language-switcher">${languageLinks(locale,page)}</div></nav></div></header>
+<header class="nav commerce-nav"><div class="wrap"><a class="brand" href="${route.home}">MyTaskLists</a><nav class="nav-links" aria-label="${escape(t['nav.main'])}"><a href="${route.pricing}">${t['nav.pricing']}</a><a href="${route.download}">${t['nav.download']}</a><a class="btn btn-ghost" href="__LOGIN_URL__">${t['commerce.signIn']}</a>${renderLanguageSwitcher(locale,page)}</nav></div></header>
 <main class="wrap commerce"><h1>${title}</h1>${body}</main><footer><div class="wrap"><span>© __YEAR__ MyTaskLists</span><a href="${route.privacy}">${t['footer.privacy']}</a><a href="${route.terms}">${t['footer.terms']}</a></div></footer>${copy}${script?`<script src="/${script}"></script>`:''}<script src="/i18n.js"></script></body></html>`;
 };
 
@@ -82,7 +79,7 @@ for(const entry of await readdir(OUT,{withFileTypes:true})) if(entry.isFile()&&/
 const landing=await readFile(join(SRC,'index.html'),'utf8');
 for(const locale of LOCALES) {
   const t = CATALOGS[locale];
-  const home=translate(landing.replace('__LANGUAGE_LINKS__',languageLinks(locale,'home')),locale);
+  const home=translate(landing.replace('__LANGUAGE_SWITCHER__',renderLanguageSwitcher(locale,'home')),locale);
   await write(ROUTES[locale].home,seo(replace(home,locale),locale,alternatesOf('home'),t['seo.homeTitle'],t['seo.homeDescription']));
   const pricing=shell(locale,'pricing',t['pricing.title'],`<p class="lede">${t['pricing.lede']}</p><div class="price-grid"><section><h2>${t['pricing.free']}</h2><p class="price">0 <span>USD</span></p><p>${t['pricing.freeText']}</p><a class="btn btn-ghost" href="${app}register">${t['pricing.createFree']}</a></section><section><h2>Premium</h2><p class="price">5 <span>USD / ${t['pricing.month']}</span></p><p>${t['pricing.premiumText']}</p><p id="premium-benefits"></p><a class="btn btn-primary" href="${app}billing" data-testid="choose-premium">${t['pricing.viewSubscription']}</a></section></div><h2>${t['pricing.beforeTitle']}</h2><p>${t['pricing.beforeText']}</p>`,'pricing.js');
   await write(ROUTES[locale].pricing,seo(replace(pricing,locale),locale,alternatesOf('pricing'),t['pricing.seoTitle'],t['pricing.seoDescription']));
@@ -91,7 +88,8 @@ for(const locale of LOCALES) {
 }
 const legal=[['privacidad','privacy'],['terminos','terms']];
 for(const [es,en] of legal) for(const name of [es,en]) {
-  const locale=name===en?'en':'es';const path=join(OUT,name+'.html');const html=await readFile(path,'utf8');const title=html.match(/<title>(.*?)<\/title>/)?.[1]||'MyTaskLists';
+  const locale=name===en?'en':'es';const path=join(OUT,name+'.html');let html=await readFile(path,'utf8');const title=html.match(/<title>(.*?)<\/title>/)?.[1]||'MyTaskLists';
+  html=html.replace('__LANGUAGE_SWITCHER__',renderLanguageSwitcher(locale,name));
   await writeFile(path,seo(html,locale,{es:'/'+es,en:'/'+en},title,CATALOGS[locale]['seo.legalDescription']));
 }
 const urls=[...new Set(LOCALES.flatMap(code=>[ROUTES[code].home,ROUTES[code].pricing,ROUTES[code].download])),'/privacidad','/privacy','/terminos','/terms'];

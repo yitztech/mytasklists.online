@@ -28,15 +28,14 @@ test.describe('Frontend web · idiomas', () => {
   }) => {
     const user = await registerUser(request, { fullName: 'Cambia Idioma' });
     await loginThroughUI(page, user.email, user.password);
-    await expect(page.getByTestId('nav-lists')).toHaveText('Mis listas');
+    await expect(page.getByTestId('new-list-button')).toContainText('Nueva lista');
 
     await page.getByTestId('language-switcher').first().locator('select').selectOption('en');
-    await expect(page.getByTestId('nav-lists')).toHaveText('My lists');
     await expect(page.getByTestId('new-list-button')).toContainText('New list');
 
     // La elección sobrevive a la recarga aunque el navegador esté en español
     await page.reload();
-    await expect(page.getByTestId('nav-lists')).toHaveText('My lists');
+    await expect(page.getByTestId('new-list-button')).toContainText('New list');
 
     // Y el backend la usa para los correos y avisos de la cuenta
     await expect
@@ -45,12 +44,12 @@ test.describe('Frontend web · idiomas', () => {
 
     await page.getByTestId('language-switcher').first().locator('select').selectOption('pt');
     await expect(page.locator('html')).toHaveAttribute('lang', 'pt');
-    await expect(page.getByTestId('nav-lists')).toHaveText('Minhas listas');
+    await expect(page.getByTestId('new-list-button')).toContainText('Nova lista');
     await expect
       .poll(async () => (await (await request.get(`${API_URL}/auth/me`, { headers: auth(user.accessToken) })).json()).preferredLocale)
       .toBe('pt');
 
     await page.getByTestId('language-switcher').first().locator('select').selectOption('es');
-    await expect(page.getByTestId('nav-lists')).toHaveText('Mis listas');
+    await expect(page.getByTestId('new-list-button')).toContainText('Nueva lista');
   });
 });

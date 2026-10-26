@@ -15,6 +15,7 @@ import {
   LIST_TYPE_ADVANCED,
   LIST_TYPE_NORMAL,
 } from '../utils/aisles';
+import { getListCardClass, getListOrderStorageKey } from '../i18n/ui-helpers';
 import type { ListSummary, ListType } from '../types';
 
 const COLORS = ['#1d5b45', '#c8371f', '#d99a00', '#2f6f9f', '#7a3e7e', '#4b5a52'];
@@ -34,6 +35,8 @@ export function ListsPage() {
   const [listType, setListType] = useState<ListType>(LIST_TYPE_NORMAL);
   const [budget, setBudget] = useState('');
   const [currency, setCurrency] = useState(CURRENCIES[0]);
+  const [draggingListId, setDraggingListId] = useState<string | null>(null);
+  const [dragOverListId, setDragOverListId] = useState<string | null>(null);
   const { show } = useToast();
   const { t } = useTranslation();
   const isSelectedAdvanced = listType === LIST_TYPE_ADVANCED;
@@ -41,15 +44,58 @@ export function ListsPage() {
   const normalBtnClass = getTypeButtonClass(isSelectedNormal);
   const advancedBtnClass = getTypeButtonClass(isSelectedAdvanced);
 
+  const applySavedListOrder = useCallback(
+    (fetchedLists: ListSummary[]): ListSummary[] => {
+      try {
+        const raw = localStorage.getItem(getListOrderStorageKey(user?.id));
+        if (!raw) return fetchedLists;
+        const order = JSON.parse(raw) as string[];
+        if (!Array.isArray(order) || order.length === 0) return fetchedLists;
+        const pos = new Map(order.map((id, idx) => [id, idx]));
+        return [...fetchedLists].sort((a, b) => {
+          const ia = pos.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+          const ib = pos.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+          return ia - ib;
+        });
+      } catch {
+        return fetchedLists;
+      }
+    },
+    [user?.id],
+  );
+
+  const reorderLists = useCallback(
+    (fromId: string, toId: string) => {
+      if (!lists || fromId === toId) return;
+      const fromIndex = lists.findIndex((item) => item.id === fromId);
+      const toIndex = lists.findIndex((item) => item.id === toId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+      const next = [...lists];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      setLists(next);
+      try {
+        localStorage.setItem(
+          getListOrderStorageKey(user?.id),
+          JSON.stringify(next.map((item) => item.id)),
+        );
+      } catch {
+        /* almacenamiento no disponible */
+      }
+    },
+    [lists, user?.id],
+  );
+
   const load = useCallback(async () => {
     try {
-      setLists(await listsApi.all());
+      const all = await listsApi.all();
+      setLists(applySavedListOrder(all));
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('lists.loadFailed'));
       setLists([]);
     }
-  }, [t]);
+  }, [applySavedListOrder, t]);
 
   useEffect(() => {
     void load();
@@ -340,12 +386,38 @@ export function ListsPage() {
       ) : (
         <div className="row g-3 lc-stagger" data-testid="list-grid">
           {lists.map((list) => (
-            <div className="col-12 col-md-6 col-lg-4" key={list.id}>
+            <div
+              className="col-12 col-md-6 col-lg-4"
+              key={list.id}
+              draggable
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', list.id);
+                setDraggingListId(list.id);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                setDragOverListId(list.id);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const fromId = event.dataTransfer.getData('text/plain') || draggingListId;
+                setDraggingListId(null);
+                setDragOverListId(null);
+                if (fromId) reorderLists(fromId, list.id);
+              }}
+              onDragEnd={() => {
+                setDraggingListId(null);
+                setDragOverListId(null);
+              }}
+            >
               <Link
                 to={`/lists/${list.id}`}
-                className="lc-list-card"
+                className={getListCardClass(draggingListId === list.id, dragOverListId === list.id)}
                 style={{ ['--lc-list' as string]: list.color }}
                 data-testid="list-card-link"
+                data-list-id={list.id}
                 data-list-name={list.name}
               >
                 <div className="d-flex align-items-start gap-3">

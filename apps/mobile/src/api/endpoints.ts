@@ -115,6 +115,8 @@ export const itemsApi = {
   restore: (itemId: string) => api.post<Item>(`/items/${itemId}/restore`),
   close: (itemId: string) => api.delete<{ id: string }>(`/items/${itemId}/close`),
   remove: (itemId: string) => api.delete<{ id: string }>(`/items/${itemId}`),
+  reorder: (listId: string, itemIds: string[]) =>
+    api.patch<{ ok: boolean }>(`/lists/${listId}/items/reorder`, { itemIds }),
   advanceClock: (itemId: string, days: number) =>
     api.post<{ reactivated: number; overdue: number }>(`/recurrence/items/${itemId}/advance`, { days }),
 };

@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 
@@ -10,9 +12,11 @@ import { CreateListDto, UpdateListDto } from '../../apps/backend/dist/modules/li
 import {
   CreateItemDto,
   UpdateItemDto,
+  ReorderItemsDto,
   SmartEntryDto,
   ReceiptScanDto,
 } from '../../apps/backend/dist/modules/items/dto/item.dto.js';
+import { toListDetailView } from '../../apps/backend/dist/modules/lists/list.mapper.js';
 import {
   classifyAisle,
   parseSmartEntryText,
@@ -389,6 +393,115 @@ describe('Servicio Backend · Validaciones, Listas, Recurrencias y Cancelaciones
       assert.strictEqual(result.lines[0].price, 70);
       assert.strictEqual(result.lines[1].matchedItemId, 'item-2');
       assert.strictEqual(result.lines[1].price, 28.5);
+    });
+
+    it('Reordenamiento manual de productos persiste sortOrder y desactiva autoSortAisles si cruza pasillos en listas avanzadas', async () => {
+      const validReorder = plainToInstance(ReorderItemsDto, {
+        itemIds: ['550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440001'],
+      });
+      assert.strictEqual((await validate(validReorder)).length, 0);
+
+      const listDetailMapperSource = fs.readFileSync(
+        fileURLToPath(new URL('../../apps/backend/src/modules/lists/list.mapper.ts', import.meta.url)),
+        'utf8',
+      );
+      const itemsServiceSource = fs.readFileSync(
+        fileURLToPath(new URL('../../apps/backend/src/modules/items/items.service.ts', import.meta.url)),
+        'utf8',
+      );
+      assert.match(listDetailMapperSource, /a\.sortOrder - b\.sortOrder/, 'list.mapper.ts debe respetar sortOrder en pendientes y comprados');
+      assert.match(itemsServiceSource, /autoSortAisles: false/, 'items.service.ts debe desactivar autoSortAisles cuando el usuario arrastra productos entre pasillos');
+
+      const now = new Date();
+      const mapped = toListDetailView(
+        {
+          id: 'list-1',
+          name: 'Lista avanzada',
+          description: null,
+          color: '#1d5b45',
+          icon: '🛒',
+          listType: 'advanced',
+          budget: 500,
+          currency: 'MXN',
+          autoSortAisles: false,
+          ownerId: 'u1',
+          isShared: false,
+          createdAt: now,
+          updatedAt: now,
+          owner: { id: 'u1', name: 'Ana', email: 'ana@test.com', subscriptionStatus: 'active' },
+          members: [],
+          items: [
+            {
+              id: 'i-2',
+              listId: 'list-1',
+              name: 'Pan',
+              quantity: 1,
+              unit: 'pza',
+              note: null,
+              imageUrl: null,
+              imageKey: null,
+              category: 'bakery',
+              storeName: null,
+              estimatedPrice: 40,
+              lastPaidPrice: null,
+              status: 'pending',
+              isRecurring: false,
+              recurrenceDays: null,
+              activatedAt: now,
+              dueAt: null,
+              lastPurchasedAt: null,
+              nextActivationAt: null,
+              isOverdue: false,
+              overdueSince: null,
+              cycleCount: 0,
+              sortOrder: 0,
+              createdById: 'u1',
+              purchasedById: null,
+              purchasedAt: null,
+              editedAt: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+            {
+              id: 'i-1',
+              listId: 'list-1',
+              name: 'Manzana',
+              quantity: 1,
+              unit: 'kg',
+              note: null,
+              imageUrl: null,
+              imageKey: null,
+              category: 'produce',
+              storeName: null,
+              estimatedPrice: 35,
+              lastPaidPrice: null,
+              status: 'pending',
+              isRecurring: false,
+              recurrenceDays: null,
+              activatedAt: now,
+              dueAt: null,
+              lastPurchasedAt: null,
+              nextActivationAt: null,
+              isOverdue: false,
+              overdueSince: null,
+              cycleCount: 0,
+              sortOrder: 1,
+              createdById: 'u1',
+              purchasedById: null,
+              purchasedAt: null,
+              editedAt: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+        },
+        true,
+      );
+      assert.deepStrictEqual(
+        mapped.pending.map((i) => i.id),
+        ['i-2', 'i-1'],
+        'Cuando autoSortAisles es false en lista avanzada, debe respetar el sortOrder manual',
+      );
     });
   });
 

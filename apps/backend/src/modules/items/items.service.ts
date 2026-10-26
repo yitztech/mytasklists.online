@@ -31,7 +31,7 @@ import {
   UpdateItemDto,
 } from './dto/item.dto';
 import { ItemImageStorage } from './item-image.storage';
-import { classifyAisle, parseSmartEntryText, scanReceiptText } from './smart-tools';
+import { aisleSortIndex, classifyAisle, parseSmartEntryText, scanReceiptText } from './smart-tools';
 
 /** Eventos que avisan de un cambio dentro de una lista */
 type ListChangeEvent =
@@ -504,6 +504,26 @@ export class ItemsService {
 
   async reorder(listId: string, userId: string, dto: ReorderItemsDto): Promise<{ ok: boolean }> {
     await this.listsService.assertMember(listId, userId, true);
+    const list = await this.listsService.getListOrFail(listId);
+    if (list.listType === ListType.ADVANCED && list.autoSortAisles !== false && dto.itemIds.length > 1) {
+      const existing = await this.items.find({
+        where: { listId, id: In(dto.itemIds) },
+        select: { id: true, category: true },
+      });
+      const categoryById = new Map(existing.map((it) => [it.id, it.category]));
+      let crossesAisles = false;
+      for (let i = 1; i < dto.itemIds.length; i++) {
+        const prevCat = categoryById.get(dto.itemIds[i - 1]);
+        const currCat = categoryById.get(dto.itemIds[i]);
+        if (prevCat && currCat && aisleSortIndex(currCat) < aisleSortIndex(prevCat)) {
+          crossesAisles = true;
+          break;
+        }
+      }
+      if (crossesAisles) {
+        await this.lists.update({ id: listId }, { autoSortAisles: false });
+      }
+    }
     await Promise.all(
       dto.itemIds.map((id, index) => this.items.update({ id, listId }, { sortOrder: index + 1 })),
     );

@@ -14,6 +14,7 @@ test.describe('Frontend web · mi cuenta', () => {
     await page.goto('/app/settings');
     await expect(page.getByTestId('settings-page')).toBeVisible();
 
+    await page.getByTestId('profile-edit-toggle').click();
     await page.getByTestId('profile-fullname').fill('Nombre Actualizado');
     await page.getByTestId('profile-whatsapp').fill(whatsapp);
     await page.getByTestId('profile-notifications').uncheck();
@@ -31,6 +32,8 @@ test.describe('Frontend web · mi cuenta', () => {
     await useSession(page, user);
 
     await page.goto('/app/settings');
+    await page.getByTestId('tab-password').click();
+    await page.getByTestId('password-change-toggle').click();
     await page.getByTestId('current-password').fill(user.password);
     await page.getByTestId('new-password').fill('ClaveNueva12345');
     await page.getByTestId('password-save').click();

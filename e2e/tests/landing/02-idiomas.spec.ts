@@ -9,6 +9,7 @@ test.describe('Landing · idiomas', () => {
     await expect(page.locator('h1')).toContainText('Shared shopping lists.');
     await expect(page.getByTestId('nav-download')).toHaveText('Download');
 
+    await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-es').click();
     await expect(page.locator('h1')).toContainText('Listas de compras compartidas.');
     await expect(page.getByTestId('nav-download')).toHaveText('Descargar');
@@ -42,7 +43,8 @@ test.describe('Landing · portugués, alemán y francés', () => {
         expect(html).not.toMatch(/__[A-Z_]+__/);
       }
 
-      await page.getByTestId('language-es').click();
+      await page.getByTestId('language-switcher-trigger').click();
+    await page.getByTestId('language-es').click();
       await expect(page).toHaveURL(/\/$/);
       await expect(page.locator('h1')).toContainText('Listas de compras compartidas.');
     });

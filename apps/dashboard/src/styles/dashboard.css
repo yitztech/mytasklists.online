@@ -179,18 +179,15 @@
   gap: 0.5rem;
 }
 .dash-sidebar .lc-lang {
-  background: rgb(255 255 255 / 0.08);
+  background: transparent;
 }
-.dash-sidebar .lc-lang button {
-  color: var(--side-text);
-}
-.dash-sidebar .lc-lang button:hover {
-  color: #fff;
-}
-.dash-sidebar .lc-lang button[aria-pressed='true'] {
-  background: rgb(255 255 255 / 0.16);
-  color: #fff;
-  box-shadow: none;
+@media (min-width: 768px) {
+  .dash-sidebar .lc-lang-menu {
+    top: auto;
+    bottom: calc(100% + 0.4rem);
+    left: 0;
+    right: auto;
+  }
 }
 .dash-logout {
   display: inline-flex;

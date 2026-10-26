@@ -19,6 +19,7 @@ ARG LANDING_NOINDEX=false
 ENV LANDING_PUBLIC_URL=$LANDING_PUBLIC_URL LANDING_NOINDEX=$LANDING_NOINDEX
 COPY package.json build.mjs translations.mjs ./
 COPY catalogs ./catalogs
+COPY i18n ./i18n
 COPY src ./src
 RUN node build.mjs
 

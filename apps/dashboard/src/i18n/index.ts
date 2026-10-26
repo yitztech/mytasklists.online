@@ -51,6 +51,12 @@ export const LOCALE_TAGS = Object.fromEntries(
   LANGUAGES.map(language => [language, LOCALE_CONFIG[language].intl]),
 ) as Record<Language, string>;
 
+export const ESCAPE_KEY = 'Escape';
+export const getLanguageOptionClass = (selected: boolean): string =>
+  selected ? 'lc-lang-option is-selected' : 'lc-lang-option';
+export const getLanguageOptionTestId = (language: string): string =>
+  'language-option-' + language;
+
 i18n.on('languageChanged', (language) => {
   document.documentElement.lang = language;
 });

@@ -1,11 +1,12 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Badge, CheckGlyph, CrossGlyph } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
 import { formatItemTotal } from '../utils/aisles';
+import { PLATFORM_WEB } from '../i18n/ui-helpers';
 import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
 
@@ -19,14 +20,81 @@ interface Props {
   /** Muestra cuándo se agregó y, si aplica, cuándo se editó */
   showDates?: boolean;
   showPrice?: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  onDragStartItem?: (itemId: string) => void;
+  onDragOverItem?: (itemId: string) => void;
+  onDropItem?: (targetItemId: string, draggedItemId?: string) => void;
+  onDragEndItem?: () => void;
+  onMoveItem?: (itemId: string, direction: -1 | 1) => void;
 }
 
 /** Producto comprado: se muestra tachado y se quita con la "x" */
-export function PurchasedRow({ item, onRestore, onClose, disabled, first, onEdit, showDates, showPrice }: Props) {
+export function PurchasedRow({
+  item,
+  onRestore,
+  onClose,
+  disabled,
+  first,
+  onEdit,
+  showDates,
+  showPrice,
+  isDragging,
+  isDragOver,
+  onDragStartItem,
+  onDragOverItem,
+  onDropItem,
+  onDragEndItem,
+  onMoveItem,
+}: Props) {
   const { t, i18n } = useTranslation();
   const localizedUnit = unitLabel(item.unit, i18n.language);
+
+  const webDragProps =
+    Platform.OS === PLATFORM_WEB
+      ? ({
+          draggable: !disabled,
+          onDragStart: (event: any) => {
+            if (disabled) return;
+            event.dataTransfer?.setData('text/plain', item.id);
+            onDragStartItem?.(item.id);
+          },
+          onDragOver: (event: any) => {
+            event.preventDefault?.();
+            onDragOverItem?.(item.id);
+          },
+          onDrop: (event: any) => {
+            event.preventDefault?.();
+            const fromId = event.dataTransfer?.getData('text/plain') || undefined;
+            onDropItem?.(item.id, fromId);
+          },
+          onDragEnd: () => onDragEndItem?.(),
+        } as Record<string, unknown>)
+      : {};
+
   return (
-    <View style={[styles.row, !first && styles.divided]} testID="purchased-item">
+    <View
+      {...webDragProps}
+      style={[
+        styles.row,
+        !first && styles.divided,
+        isDragging && styles.rowDragging,
+        isDragOver && styles.rowDragOver,
+      ]}
+      testID="purchased-item"
+    >
+      <Pressable
+        testID="item-drag-handle"
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+        disabled={disabled}
+        onPress={() => onMoveItem?.(item.id, -1)}
+        onLongPress={() => onMoveItem?.(item.id, 1)}
+        style={styles.dragHandle}
+      >
+        <Text style={styles.dragGrip}>⋮⋮</Text>
+      </Pressable>
+
       <Pressable
         style={styles.checkbox}
         onPress={() => !disabled && onRestore(item)}
@@ -84,6 +152,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: spacing.lg,
   },
+  rowDragging: {
+    opacity: 0.5,
+    backgroundColor: colors.brandSoft,
+  },
+  rowDragOver: {
+    borderTopWidth: 2,
+    borderTopColor: colors.brand,
+    backgroundColor: colors.brandSoft,
+  },
   divided: { borderTopWidth: 1, borderTopColor: colors.line },
   checkbox: {
     width: 26,
@@ -92,6 +169,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dragHandle: {
+    minWidth: 28,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dragGrip: {
+    fontSize: 15,
+    color: colors.muted,
+    fontWeight: '700',
+    letterSpacing: -1,
   },
   name: {
     fontSize: 16,
