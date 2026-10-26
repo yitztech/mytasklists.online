@@ -3974,13 +3974,13 @@
       "count": 1,
       "text": "true"
     },
-    "apps/landing/build.mjs:1ef535a339697696": {
+    "apps/landing/build.mjs:d88fff68b81db2e9": {
       "count": 1,
-      "text": "User-agent: * Disallow: /"
+      "text": "User-agent: * Allow: /"
     },
-    "apps/landing/build.mjs:277132c58dbc0eb1": {
+    "apps/landing/build.mjs:22fbeabfcfeffb87": {
       "count": 1,
-      "text": "User-agent: * Allow: / Disallow: /api/ Sitemap: … /sitemap.xml"
+      "text": "User-agent: * Allow: / Sitemap: … /sitemap.xml"
     },
     "apps/landing/build.mjs:d5957ce613b76907": {
       "count": 1,
