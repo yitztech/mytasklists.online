@@ -1,10 +1,10 @@
 {
-  "sourceHash": "ad00c4dbf11ea842135389f4a6172908aefb9be7a3ce63ae8ab7aa59ba94d434",
-  "version": "2.7.0",
+  "sourceHash": "fe029fa221bba63ef6d6c8e1e4611a678eeaf037df33a2e4e9c13470a5782138",
+  "version": "2.7.1",
   "runs": {
     "android": {
       "device": "Medium_Tablet",
-      "passedAt": "2026-10-26T19:45:48.835Z"
+      "passedAt": "2026-10-26T21:29:32.419Z"
     }
   }
 }
