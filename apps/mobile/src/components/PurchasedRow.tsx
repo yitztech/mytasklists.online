@@ -1,7 +1,7 @@
-import React from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Badge, CheckGlyph, CrossGlyph } from './ui';
+import { Badge, CheckGlyph, CrossGlyph, GripVerticalGlyph, PencilGlyph } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
@@ -50,6 +50,33 @@ export function PurchasedRow({
   const { t, i18n } = useTranslation();
   const localizedUnit = unitLabel(item.unit, i18n.language);
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 10,
+      onPanResponderGrant: () => {
+        if (disabled) return;
+        onDragStartItem?.(item.id);
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (disabled) return;
+        if (gesture.dy < -35) {
+          onMoveItem?.(item.id, -1);
+          gesture.dy = 0;
+        } else if (gesture.dy > 35) {
+          onMoveItem?.(item.id, 1);
+          gesture.dy = 0;
+        }
+      },
+      onPanResponderRelease: () => {
+        onDragEndItem?.();
+      },
+      onPanResponderTerminate: () => {
+        onDragEndItem?.();
+      },
+    }),
+  ).current;
+
   const webDragProps =
     Platform.OS === PLATFORM_WEB
       ? ({
@@ -90,9 +117,13 @@ export function PurchasedRow({
         disabled={disabled}
         onPress={() => onMoveItem?.(item.id, -1)}
         onLongPress={() => onMoveItem?.(item.id, 1)}
-        style={styles.dragHandle}
+        {...panResponder.panHandlers}
+        style={({ pressed }) => [
+          styles.dragHandle,
+          (pressed || isDragging) && styles.dragHandleActive,
+        ]}
       >
-        <Text style={styles.dragGrip}>⋮⋮</Text>
+        <GripVerticalGlyph active={isDragging} />
       </Pressable>
 
       <Pressable
@@ -127,17 +158,29 @@ export function PurchasedRow({
         {showDates ? <Text style={styles.meta} testID="item-dates">{itemDates(item, t, i18n.language)}</Text> : null}
       </View>
 
-      <Pressable onPress={() => onEdit(item)} accessibilityRole="button" accessibilityLabel={`${t('item.edit')}: ${item.name}`} disabled={disabled} style={styles.edit}><Text style={{ color: colors.brand, fontWeight: '700' }}>{t('item.edit')}</Text></Pressable>
+      <View style={styles.actions}>
+        <Pressable
+          onPress={() => onEdit(item)}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('item.edit')}: ${item.name}`}
+          disabled={disabled}
+          testID="item-edit"
+          style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+          hitSlop={4}
+        >
+          <PencilGlyph size={15} color={colors.ink} />
+        </Pressable>
 
-      <Pressable
-        onPress={() => !disabled && onClose(item)}
-        accessibilityLabel={t('item.close', { name: item.name })}
-        testID="purchased-close"
-        hitSlop={12}
-        style={styles.close}
-      >
-        <CrossGlyph size={14} />
-      </Pressable>
+        <Pressable
+          onPress={() => !disabled && onClose(item)}
+          accessibilityLabel={t('item.close', { name: item.name })}
+          testID="purchased-close"
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconBtn, styles.iconBtnClose, pressed && styles.iconBtnClosePressed]}
+        >
+          <CrossGlyph size={14} color={colors.inkSoft} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -153,13 +196,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   rowDragging: {
-    opacity: 0.5,
-    backgroundColor: colors.brandSoft,
+    opacity: 0.6,
+    backgroundColor: '#edf7f2',
+    borderColor: colors.brand,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    zIndex: 10,
   },
   rowDragOver: {
-    borderTopWidth: 2,
+    borderTopWidth: 3,
     borderTopColor: colors.brand,
-    backgroundColor: colors.brandSoft,
+    backgroundColor: '#edf7f2',
   },
   divided: { borderTopWidth: 1, borderTopColor: colors.line },
   checkbox: {
@@ -173,14 +226,37 @@ const styles = StyleSheet.create({
   dragHandle: {
     minWidth: 28,
     minHeight: 40,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dragGrip: {
-    fontSize: 15,
-    color: colors.muted,
-    fontWeight: '700',
-    letterSpacing: -1,
+  dragHandleActive: {
+    backgroundColor: '#e2efe7',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 4,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  iconBtnPressed: {
+    backgroundColor: '#e2e8f0',
+  },
+  iconBtnClose: {
+    backgroundColor: '#f8fafc',
+  },
+  iconBtnClosePressed: {
+    backgroundColor: '#f1f5f9',
   },
   name: {
     fontSize: 16,

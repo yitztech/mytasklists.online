@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Badge, CheckGlyph } from './ui';
+import { Badge, CheckGlyph, GripVerticalGlyph, PencilGlyph, TrashGlyph } from './ui';
 import { colors, spacing } from '../theme';
 import type { Item } from '../types';
 import { API_URL } from '../api/client';
@@ -15,6 +15,7 @@ export const COMPLETION_ANIMATION_MS = 600;
 interface Props {
   item: Item;
   onPurchase: (item: Item) => void;
+  onDelete?: (item: Item) => void;
   onLongPress?: (item: Item) => void;
   disabled?: boolean;
   /** Primera fila de la hoja: sin filete arriba */
@@ -39,6 +40,7 @@ interface Props {
 export function ItemRow({
   item,
   onPurchase,
+  onDelete,
   onLongPress,
   disabled,
   first,
@@ -59,6 +61,33 @@ export function ItemRow({
   const rowOpacity = useRef(new Animated.Value(1)).current;
   const rowSlide = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 10,
+      onPanResponderGrant: () => {
+        if (disabled || completing) return;
+        onDragStartItem?.(item.id);
+      },
+      onPanResponderMove: (_, gesture) => {
+        if (disabled || completing) return;
+        if (gesture.dy < -35) {
+          onMoveItem?.(item.id, -1);
+          gesture.dy = 0;
+        } else if (gesture.dy > 35) {
+          onMoveItem?.(item.id, 1);
+          gesture.dy = 0;
+        }
+      },
+      onPanResponderRelease: () => {
+        onDragEndItem?.();
+      },
+      onPanResponderTerminate: () => {
+        onDragEndItem?.();
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     return () => {
@@ -156,9 +185,13 @@ export function ItemRow({
         disabled={disabled || completing}
         onPress={() => onMoveItem?.(item.id, -1)}
         onLongPress={() => onMoveItem?.(item.id, 1)}
-        style={styles.dragHandle}
+        {...panResponder.panHandlers}
+        style={({ pressed }) => [
+          styles.dragHandle,
+          (pressed || isDragging) && styles.dragHandleActive,
+        ]}
       >
-        <Text style={styles.dragGrip}>⋮⋮</Text>
+        <GripVerticalGlyph active={isDragging} />
       </Pressable>
 
       <Pressable
@@ -224,7 +257,34 @@ export function ItemRow({
         {item.note ? <Text style={styles.meta} numberOfLines={2}>{item.note}</Text> : null}
         {showDates ? <Text style={styles.meta} testID="item-dates">{itemDates(item, t, i18n.language)}</Text> : null}
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${t('item.edit')}: ${item.name}`} onPress={() => onEdit(item)} disabled={disabled || completing} style={styles.edit}><Text style={{ color: colors.brand, fontWeight: '700' }}>{t('item.edit')}</Text></Pressable>
+
+      <View style={styles.actions}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('item.edit')}: ${item.name}`}
+          onPress={() => onEdit(item)}
+          disabled={disabled || completing}
+          testID="item-edit"
+          style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+          hitSlop={4}
+        >
+          <PencilGlyph size={15} color={colors.ink} />
+        </Pressable>
+
+        {onDelete && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${t('detail.delete')}: ${item.name}`}
+            onPress={() => onDelete(item)}
+            disabled={disabled || completing}
+            testID="item-delete"
+            style={({ pressed }) => [styles.iconBtn, styles.iconBtnDanger, pressed && styles.iconBtnDangerPressed]}
+            hitSlop={4}
+          >
+            <TrashGlyph size={15} color={colors.danger} />
+          </Pressable>
+        )}
+      </View>
     </Animated.View>
   );
 }
@@ -243,13 +303,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandSoft,
   },
   rowDragging: {
-    opacity: 0.5,
-    backgroundColor: colors.brandSoft,
+    opacity: 0.6,
+    backgroundColor: '#edf7f2',
+    borderColor: colors.brand,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
   rowDragOver: {
-    borderTopWidth: 2,
+    borderTopWidth: 3,
     borderTopColor: colors.brand,
-    backgroundColor: colors.brandSoft,
+    backgroundColor: '#edf7f2',
   },
   divided: { borderTopWidth: 1, borderTopColor: colors.line },
   checkbox: {
@@ -270,16 +339,38 @@ const styles = StyleSheet.create({
   dragHandle: {
     minWidth: 28,
     minHeight: 40,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dragGrip: {
-    fontSize: 15,
-    color: colors.muted,
-    fontWeight: '700',
-    letterSpacing: -1,
+  dragHandleActive: {
+    backgroundColor: '#e2efe7',
   },
-  edit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginLeft: 4,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  iconBtnPressed: {
+    backgroundColor: '#e2e8f0',
+  },
+  iconBtnDanger: {
+    backgroundColor: '#fef2f2',
+  },
+  iconBtnDangerPressed: {
+    backgroundColor: '#fee2e2',
+  },
   name: { fontSize: 16, fontWeight: '600', color: colors.ink, letterSpacing: -0.15 },
   nameCompleting: {
     color: colors.muted,

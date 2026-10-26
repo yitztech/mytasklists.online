@@ -548,6 +548,7 @@ export function ListDetailScreen({ route, navigation }: any) {
                     isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
                     isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
                     onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
+                    onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
                     onEdit={setEditingItem}
                     onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
                     onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
@@ -577,6 +578,7 @@ export function ListDetailScreen({ route, navigation }: any) {
             isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
             isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
             onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
+            onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
             onEdit={setEditingItem}
             onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
             onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
