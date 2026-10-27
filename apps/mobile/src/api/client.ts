@@ -60,13 +60,40 @@ export const tokens = {
 };
 
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-  ) {
+  readonly status: number;
+  constructor(message: string, status: number) {
     super(message);
     this.name = 'ApiError';
+    this.status = status;
   }
+}
+
+export function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+  if (error instanceof ApiError) return false;
+  const msg = String((error as any)?.message ?? '').toLowerCase();
+  const name = String((error as any)?.name ?? '');
+  const code = String((error as any)?.code ?? '').toLowerCase();
+
+  return (
+    msg.includes('network request failed') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('fetch failed') ||
+    msg.includes('network error') ||
+    msg.includes('the network connection was lost') ||
+    msg.includes('the internet connection appears to be offline') ||
+    msg.includes('connection refused') ||
+    msg.includes('econnrefused') ||
+    msg.includes('enotfound') ||
+    msg.includes('eai_again') ||
+    msg.includes('etimedout') ||
+    msg.includes('socket hang up') ||
+    name === 'AbortError' ||
+    code === 'econnrefused' ||
+    code === 'enotfound' ||
+    code === 'eai_again' ||
+    code === 'etimedout'
+  );
 }
 
 const listeners = new Set<() => void>();
@@ -124,13 +151,15 @@ interface Options {
   body?: unknown;
   auth?: boolean;
   retry?: boolean;
+  headers?: Record<string, string>;
 }
 
 export async function request<T>(path: string, options: Options = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, retry = true } = options;
+  const { method = 'GET', body, auth = true, retry = true, headers: customHeaders } = options;
 
   const headers: Record<string, string> = {
     ...clientHeaders,
+    ...(customHeaders ?? {}),
     // La API responde los errores en el idioma de la app
     'Accept-Language': currentLanguage(),
     Accept: 'application/json',
@@ -177,10 +206,19 @@ export async function request<T>(path: string, options: Options = {}): Promise<T
   return payload as T;
 }
 
+type HttpHeaders = Record<string, string>;
+
 export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown, auth = true) =>
-    request<T>(path, { method: 'POST', body, auth }),
-  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body }),
-  delete: <T>(path: string, body?: unknown) => request<T>(path, { method: 'DELETE', body }),
+  get<T>(path: string, headers?: HttpHeaders) {
+    return request<T>(path, { headers });
+  },
+  post<T>(path: string, body?: unknown, auth = true, headers?: HttpHeaders) {
+    return request<T>(path, { method: 'POST', body, auth, headers });
+  },
+  patch<T>(path: string, body?: unknown, headers?: HttpHeaders) {
+    return request<T>(path, { method: 'PATCH', body, headers });
+  },
+  delete<T>(path: string, body?: unknown, headers?: HttpHeaders) {
+    return request<T>(path, { method: 'DELETE', body, headers });
+  },
 };

@@ -6,9 +6,12 @@ import { Button } from './ui';
 import { ItemPhotoPicker } from './ItemPhotoPicker';
 import { SelectField } from './SelectField';
 import { itemsApi } from '../api/endpoints';
-import { API_URL } from '../api/client';
+import { API_URL, isNetworkError } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useOffline } from '../context/OfflineContext';
+import { offlineQueue, offlineStorage } from '../offline';
 import { colors, radius, spacing } from '../theme';
-import type { Item } from '../types';
+import type { Item, ListDetail } from '../types';
 import { itemImageForm } from '../utils/item-image';
 import { CUSTOM_UNIT, localizedUnits } from '../utils/units';
 
@@ -23,6 +26,8 @@ export function EditItemModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { user } = useAuth();
+  const { setOnline, refreshPendingCount } = useOffline();
   const { t, i18n } = useTranslation();
   const [name, setName] = useState(item?.name ?? ''); const [note, setNote] = useState(item?.note ?? ''); const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
   const [estimatedPrice, setEstimatedPrice] = useState(item?.estimatedPrice !== null && item?.estimatedPrice !== undefined ? String(item.estimatedPrice) : '');
@@ -35,12 +40,59 @@ export function EditItemModal({
     const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
     if (!name.trim() || !Number.isFinite(amount) || amount < 0.01 || amount > 99999 || Math.abs(Math.round(amount * 100) - amount * 100) > 1e-7 || (recurring && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) || !selected || selected.length > 20 || (parsedPrice !== null && (!Number.isFinite(parsedPrice) || parsedPrice < 0))) { Alert.alert(t('editItem.invalid')); return; }
     setSaving(true);
+    const updatePayload = {
+      name: name.trim(),
+      note: note.trim() || null,
+      quantity: amount,
+      unit: selected,
+      isRecurring: recurring,
+      ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}),
+      ...(isAdvanced ? { estimatedPrice: parsedPrice } : {}),
+    };
     try {
-      await itemsApi.update(item.id, { name: name.trim(), note: note.trim() || null, quantity: amount, unit: selected, isRecurring: recurring, ...(recurring ? { recurrenceDays: Number(days) || 14 } : {}), ...(isAdvanced ? { estimatedPrice: parsedPrice } : {}) });
+      await itemsApi.update(item.id, updatePayload);
       if (photo) await itemsApi.uploadImage(item.id, await itemImageForm(photo));
       else if (clearPhoto && item.imageUrl) await itemsApi.removeImage(item.id);
-      onSaved(); onClose();
-    } catch (error) { Alert.alert(t('editItem.saveFailed'), (error as Error).message); } finally { setSaving(false); }
+      setOnline(true);
+      onSaved();
+      onClose();
+    } catch (error) {
+      if (isNetworkError(error)) {
+        setOnline(false);
+        if (user?.id) {
+          await offlineQueue.enqueue(user.id, 'update_item', {
+            itemId: item.id,
+            listId: item.listId,
+            payload: updatePayload,
+          });
+          const cachedDetail = await offlineStorage.getListDetail(user.id, item.listId);
+          if (cachedDetail) {
+            const updateItemInList = (it: Item): Item =>
+              it.id === item.id
+                ? {
+                    ...it,
+                    ...updatePayload,
+                    updatedAt: new Date().toISOString(),
+                    editedAt: new Date().toISOString(),
+                  }
+                : it;
+            const updatedDetail: ListDetail = {
+              ...cachedDetail,
+              pending: cachedDetail.pending.map(updateItemInList),
+              purchased: cachedDetail.purchased.map(updateItemInList),
+            };
+            await offlineStorage.saveListDetail(user.id, item.listId, updatedDetail);
+          }
+          void refreshPendingCount();
+        }
+        onSaved();
+        onClose();
+      } else {
+        Alert.alert(t('editItem.saveFailed'), (error as Error).message);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
   return <Modal visible={!!item} transparent animationType="slide" onRequestClose={onClose}><View style={styles.scrim}><View style={styles.card}><ScrollView keyboardShouldPersistTaps="handled"><Text style={styles.title}>{t('editItem.title')}</Text>
     <Text style={styles.label}>{t('editItem.name')}</Text><TextInput style={styles.input} accessibilityLabel={t('editItem.name')} testID="edit-item-name" value={name} onChangeText={setName} maxLength={140} />

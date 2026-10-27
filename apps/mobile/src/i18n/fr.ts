@@ -246,4 +246,13 @@ export const fr: Catalog<typeof es> = {
     receiptApply: 'Appliquer les achats',
     receiptDone: 'Ticket appliqué ({{count}} achetés).',
   },
+  offline: {
+    banner: 'Hors ligne',
+    syncing: 'Synchronisation des modifications...',
+    bannerPending: 'Hors ligne · {{count}} modification(s) enregistrée(s) localement',
+    pendingCount: '{{count}} modification(s) enregistrée(s) localement',
+    actionUnavailable: 'Cette action nécessite une connexion internet.',
+    actionUnavailableTitle: 'Hors ligne',
+    allSynced: 'Tout est synchronisé',
+  },
 };

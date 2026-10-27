@@ -247,4 +247,13 @@ export const es = {
     receiptApply: 'Aplicar compras',
     receiptDone: 'Ticket aplicado ({{count}} comprados).',
   },
+  offline: {
+    banner: 'Sin conexión',
+    syncing: 'Sincronizando cambios...',
+    bannerPending: 'Sin conexión · {{count}} cambio(s) guardado(s) localmente',
+    pendingCount: '{{count}} cambio(s) guardado(s) localmente',
+    actionUnavailable: 'Esta acción requiere conexión a internet.',
+    actionUnavailableTitle: 'Sin conexión',
+    allSynced: 'Todo sincronizado',
+  },
 } as const;

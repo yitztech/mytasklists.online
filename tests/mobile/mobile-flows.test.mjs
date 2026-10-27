@@ -3,13 +3,73 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { register } from 'node:module';
+
+const loader = `
+export async function resolve(specifier, context, nextResolve) {
+  if (specifier === "react-native") {
+    return {
+      url: "data:text/javascript," + encodeURIComponent("export const Platform = { OS: \\"ios\\" }; export const Alert = { alert: () => {} }; export default { Platform, Alert };"),
+      format: "module",
+      shortCircuit: true,
+    };
+  }
+  if (specifier === "expo-constants") {
+    return {
+      url: "data:text/javascript," + encodeURIComponent("export default { expoConfig: { version: \\"2.8.0\\" } };"),
+      format: "module",
+      shortCircuit: true,
+    };
+  }
+  if (specifier === "expo-secure-store") {
+    return {
+      url: "data:text/javascript," + encodeURIComponent("export const getItemAsync = async () => null; export const setItemAsync = async () => {}; export const deleteItemAsync = async () => {};"),
+      format: "module",
+      shortCircuit: true,
+    };
+  }
+  if (specifier.startsWith("expo-localization")) {
+    return {
+      url: "data:text/javascript," + encodeURIComponent("export const getLocales = () => [{ languageCode: \\"es\\" }]; export default { getLocales };"),
+      format: "module",
+      shortCircuit: true,
+    };
+  }
+  if (specifier === "@react-native-async-storage/async-storage") {
+    return {
+      url: "data:text/javascript," + encodeURIComponent("const store = new Map(); const AsyncStorage = { getItem: async (k) => store.get(k) ?? null, setItem: async (k, v) => { store.set(k, String(v)); }, removeItem: async (k) => { store.delete(k); }, getAllKeys: async () => Array.from(store.keys()), multiRemove: async (keys) => { for (const k of keys) store.delete(k); } }; export default AsyncStorage;"),
+      format: "module",
+      shortCircuit: true,
+    };
+  }
+  try {
+    return await nextResolve(specifier, context);
+  } catch (err) {
+    if (specifier.startsWith(".")) {
+      try {
+        return await nextResolve(specifier + ".ts", context);
+      } catch {}
+      try {
+        return await nextResolve(specifier + "/index.ts", context);
+      } catch {}
+    }
+    throw err;
+  }
+}
+`;
+register('data:text/javascript,' + encodeURIComponent(loader), import.meta.url);
+
+const { offlineStorage, setStorageDriver, createTempId } = await import('../../apps/mobile/src/offline/offlineStorage.ts');
+const { offlineQueue } = await import('../../apps/mobile/src/offline/offlineQueue.ts');
+const { offlineDrafts, getItemDraftKey } = await import('../../apps/mobile/src/offline/offlineDrafts.ts');
+const { offlineSync } = await import('../../apps/mobile/src/offline/offlineSync.ts');
+const { isNetworkError, ApiError } = await import('../../apps/mobile/src/api/client.ts');
 
 /**
  * Pruebas unitarias y de comportamiento de Apps Móviles (iOS y Android)
  * Cubren plataformas móviles, almacenamiento seguro, tokens de notificación,
- * compatibilidad de versión, validaciones de interfaz y flujos de listas/recurrencia.
- *
- * NOTA: Como especificado, estas pruebas NO se ejecutan en los pipelines de GitHub.
+ * compatibilidad de versión, validaciones de interfaz, flujos de listas y
+ * soporte de funcionamiento offline.
  */
 describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => {
 
@@ -268,6 +328,286 @@ describe('Apps Móviles (iOS y Android) · Comportamiento y Validación', () => 
       assert.match(itemRowSource, /testID="item-drag-handle"/, 'ItemRow debe incluir manejador para reordenar');
       assert.match(purchasedRowSource, /testID="item-drag-handle"/, 'PurchasedRow debe incluir manejador para reordenar');
       assert.match(detailSource, /itemsApi\.reorder/, 'ListDetailScreen debe persistir el reordenamiento en todos los tipos de listas');
+    });
+  });
+
+  describe('Móvil: Soporte Offline, Aislamiento por Cuenta, Borradores y Sincronización', () => {
+    const mobileSrcDir = fileURLToPath(new URL('../../apps/mobile/src/', import.meta.url));
+    const maestroFlowsDir = fileURLToPath(new URL('../../apps/mobile/.maestro/flows/', import.meta.url));
+
+    const createMemoryDriver = () => {
+      const store = new Map();
+      return {
+        getItem: async (key) => store.get(key) ?? null,
+        setItem: async (key, value) => { store.set(key, String(value)); },
+        removeItem: async (key) => { store.delete(key); },
+        getAllKeys: async () => Array.from(store.keys()),
+        multiRemove: async (keys) => { for (const k of keys) store.delete(k); },
+        _dump: () => Object.fromEntries(store.entries()),
+      };
+    };
+
+    describe('Aislamiento de datos locales por cuenta (Partición multi-usuario y seguridad)', () => {
+      it('Caso de éxito: todas las claves de caché están prefijadas por userId y no hay colisión entre cuentas usando módulos reales', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userA = 'usr_user_a_123';
+        const userB = 'usr_user_b_456';
+
+        await offlineStorage.saveProfile(userA, { id: userA, fullName: 'Usuario A', email: 'a@example.com' });
+        await offlineStorage.saveLists(userA, [{ id: 'list_a', name: 'Lista de A', pendingCount: 1, purchasedCount: 0 }]);
+        await offlineQueue.enqueue(userA, 'create_list', { name: 'Lista A' });
+        await offlineDrafts.saveDraft(userA, 'new_list', { name: 'Borrador A' });
+
+        await offlineStorage.saveProfile(userB, { id: userB, fullName: 'Usuario B', email: 'b@example.com' });
+        await offlineStorage.saveLists(userB, [{ id: 'list_b', name: 'Lista de B', pendingCount: 0, purchasedCount: 0 }]);
+
+        const profileB = await offlineStorage.getProfile(userB);
+        const listsB = await offlineStorage.getLists(userB);
+        const queueB = await offlineQueue.getQueue(userB);
+        const draftB = await offlineDrafts.getDraft(userB, 'new_list');
+
+        assert.strictEqual(profileB.fullName, 'Usuario B');
+        assert.strictEqual(listsB[0].id, 'list_b');
+        assert.strictEqual(queueB.length, 0, 'Usuario B no debe tener acceso a la cola de mutaciones de Usuario A');
+        assert.strictEqual(draftB, null, 'Usuario B no debe tener acceso al borrador de Usuario A');
+
+        // Limpiar cuenta A (clearUserData)
+        await offlineStorage.clearUserData(userA);
+
+        assert.strictEqual(await offlineStorage.getProfile(userA), null);
+        assert.strictEqual(await offlineStorage.getLists(userA), null);
+        assert.strictEqual((await offlineQueue.getQueue(userA)).length, 0);
+        assert.notStrictEqual(await offlineStorage.getProfile(userB), null, 'Usuario B permanece intacto');
+      });
+
+      it('Caso de éxito: no se almacenan contraseñas ni hashes en el perfil seguro local', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const profile = {
+          id: 'u1',
+          fullName: 'Test User',
+          email: 'test@example.com',
+          password: 'SecretPassword123!',
+          passwordHash: '$2b$10$abcdef...',
+          role: 'user',
+        };
+
+        await offlineStorage.saveProfile('u1', profile);
+        const saved = await offlineStorage.getProfile('u1');
+        assert.strictEqual('password' in saved, false);
+        assert.strictEqual('passwordHash' in saved, false);
+      });
+    });
+
+    describe('Apertura de la app sin internet y consulta de listas y perfiles', () => {
+      it('Caso de éxito: bootstrap offline recupera perfil en caché y no limpia tokens por fallo de red', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_offline_demo';
+        await offlineStorage.setLastActiveUserId(userId);
+        await offlineStorage.saveProfile(userId, { id: userId, fullName: 'Offline User', email: 'offline@demo.com' });
+
+        const netErr = new TypeError('Network request failed');
+        assert.strictEqual(isNetworkError(netErr), true, 'Network request failed debe ser detectado como network error');
+
+        const authErr = new ApiError('Unauthorized', 401);
+        assert.strictEqual(isNetworkError(authErr), false, '401 no es network error');
+
+        const lastId = await offlineStorage.getLastActiveUserId();
+        const cachedUser = await offlineStorage.getProfile(lastId);
+        assert.notStrictEqual(cachedUser, null);
+        assert.strictEqual(cachedUser.fullName, 'Offline User');
+      });
+
+      it('Caso de éxito: consulta de listas y detalle offline recupera los datos cacheados con offlineStorage', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_offline_lists';
+        const listId = 'list_cached_1';
+
+        const cachedLists = [
+          { id: listId, name: 'Supermercado', pendingCount: 3, purchasedCount: 1 },
+        ];
+        const cachedDetail = {
+          id: listId,
+          name: 'Supermercado',
+          pending: [{ id: 'item_1', name: 'Leche' }],
+          purchased: [{ id: 'item_2', name: 'Pan' }],
+        };
+
+        await offlineStorage.saveLists(userId, cachedLists);
+        await offlineStorage.saveListDetail(userId, listId, cachedDetail);
+
+        const lists = await offlineStorage.getLists(userId);
+        const detail = await offlineStorage.getListDetail(userId, listId);
+
+        assert.strictEqual(lists.length, 1);
+        assert.strictEqual(lists[0].name, 'Supermercado');
+        assert.strictEqual(detail.pending.length, 1);
+        assert.strictEqual(detail.pending[0].name, 'Leche');
+      });
+    });
+
+    describe('Conservación de borradores y operaciones pendientes incluso al reiniciar', () => {
+      it('Caso de éxito: borradores de formularios usan offlineDrafts real y persisten', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_drafts';
+
+        await offlineDrafts.saveDraft(userId, 'new_list', { name: 'Lista Fiesta', listType: 'advanced', budget: '1500' });
+        const restoredDraft = await offlineDrafts.getDraft(userId, 'new_list');
+        assert.deepStrictEqual(restoredDraft, { name: 'Lista Fiesta', listType: 'advanced', budget: '1500' });
+
+        await offlineDrafts.clearDraft(userId, 'new_list');
+        assert.strictEqual(await offlineDrafts.getDraft(userId, 'new_list'), null);
+      });
+
+      it('Caso de éxito: la cola de operaciones usa offlineQueue real y persiste mutaciones', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_queue';
+
+        await offlineQueue.enqueue(userId, 'create_list', { tempId: 'temp_l1', name: 'Nueva Lista' });
+        await offlineQueue.enqueue(userId, 'create_item', { tempId: 'temp_i1', listId: 'temp_l1', name: 'Manzanas' });
+
+        const queue = await offlineQueue.getQueue(userId);
+        assert.strictEqual(queue.length, 2);
+        assert.strictEqual(queue[0].type, 'create_list');
+        assert.strictEqual(queue[1].type, 'create_item');
+        assert.strictEqual(await offlineQueue.count(userId), 2);
+      });
+    });
+
+    describe('Sincronización al reconectar, sin duplicados y resolviendo conflictos', () => {
+      it('Caso de éxito: deduplicación y bloqueo con offlineSync real', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_sync_lock';
+
+        assert.strictEqual(offlineSync.isSyncing(userId), false);
+        const p1 = offlineSync.syncPending(userId);
+        const p2 = offlineSync.syncPending(userId);
+        const [res1, res2] = await Promise.all([p1, p2]);
+        assert.strictEqual(offlineSync.isSyncing(userId), false);
+        assert.ok(res1 !== null && res2 !== null);
+      });
+
+      it('Caso de éxito: remapId real actualiza referencias de ID temporales en la cola persistida', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_remap';
+
+        await offlineQueue.enqueue(userId, 'create_list', { tempId: 'temp_l1', name: 'Lista Abarrotes' });
+        await offlineQueue.enqueue(userId, 'create_item', { tempId: 'temp_i1', listId: 'temp_l1', name: 'Arroz' });
+        await offlineQueue.enqueue(userId, 'purchase_item', { itemId: 'temp_i1', listId: 'temp_l1' });
+        await offlineQueue.enqueue(userId, 'reorder_items', { listId: 'temp_l1', itemIds: ['temp_i1', 'item_existing'] });
+
+        // Ejecutar remapId real de la lista
+        await offlineQueue.remapId(userId, 'temp_l1', 'real_list_999');
+        // Ejecutar remapId real del producto
+        await offlineQueue.remapId(userId, 'temp_i1', 'real_item_888');
+
+        const queue = await offlineQueue.getQueue(userId);
+        assert.strictEqual(queue[1].payload.listId, 'real_list_999');
+        assert.strictEqual(queue[1].payload.tempId, 'real_item_888');
+        assert.strictEqual(queue[2].payload.listId, 'real_list_999');
+        assert.strictEqual(queue[2].payload.itemId, 'real_item_888');
+        assert.deepStrictEqual(queue[3].payload.itemIds, ['real_item_888', 'item_existing']);
+      });
+
+      it('Caso de éxito: saveIdMapping y getAllIdMappings persisten el mapeo en offlineStorage', async () => {
+        const driver = createMemoryDriver();
+        setStorageDriver(driver);
+        const userId = 'usr_idmap_storage';
+
+        await offlineStorage.saveIdMapping(userId, 'temp_l1', 'real_l1');
+        await offlineStorage.saveIdMapping(userId, 'temp_i1', 'real_i1');
+
+        const mappings = await offlineStorage.getAllIdMappings(userId);
+        assert.strictEqual(mappings['temp_l1'], 'real_l1');
+        assert.strictEqual(mappings['temp_i1'], 'real_i1');
+      });
+
+      it('Caso de éxito: discriminación estricta de errores con isNetworkError (no confunde TypeErrors de runtime)', () => {
+        const fetchError = new TypeError('Failed to fetch');
+        assert.strictEqual(isNetworkError(fetchError), true);
+
+        const netReqError = new TypeError('Network request failed');
+        assert.strictEqual(isNetworkError(netReqError), true);
+
+        const timeoutErr = new Error('The network connection was lost');
+        assert.strictEqual(isNetworkError(timeoutErr), true);
+
+        const runtimeError = new TypeError('Cannot read properties of undefined');
+        assert.strictEqual(isNetworkError(runtimeError), false, 'Errores de runtime NO deben confundirse con errores de red');
+
+        const codeError = new TypeError('something failed');
+        assert.strictEqual(isNetworkError(codeError), false, 'Mensajes genéricos sin conectividad no son error de red');
+      });
+    });
+
+    describe('Inspección de código e integridad de componentes offline y flujo Maestro', () => {
+      it('04-offline.yaml existe en .maestro/flows/ para pruebas nativas offline', () => {
+        assert.ok(fs.existsSync(path.join(maestroFlowsDir, '04-offline.yaml')));
+        const flowContent = fs.readFileSync(path.join(maestroFlowsDir, '04-offline.yaml'), 'utf8');
+        assert.match(flowContent, /appId: online\.mytasklists\.app/);
+        assert.match(flowContent, /purchased-close/);
+      });
+
+      it('offlineStorage.ts, offlineQueue.ts, offlineDrafts.ts y offlineSync.ts están implementados', () => {
+        assert.ok(fs.existsSync(path.join(mobileSrcDir, 'offline/offlineStorage.ts')));
+        assert.ok(fs.existsSync(path.join(mobileSrcDir, 'offline/offlineQueue.ts')));
+        assert.ok(fs.existsSync(path.join(mobileSrcDir, 'offline/offlineDrafts.ts')));
+        assert.ok(fs.existsSync(path.join(mobileSrcDir, 'offline/offlineSync.ts')));
+      });
+
+      it('OfflineBanner.tsx existe, tiene testID="offline-banner" y usa frases completas según AGENTS.md §9.1', () => {
+        const bannerSource = fs.readFileSync(path.join(mobileSrcDir, 'components/OfflineBanner.tsx'), 'utf8');
+        assert.match(bannerSource, /testID="offline-banner"/);
+        assert.match(bannerSource, /offline\.banner/);
+        assert.match(bannerSource, /offline\.syncing/);
+        assert.match(bannerSource, /offline\.bannerPending/);
+        assert.match(bannerSource, /offline\.pendingCount/);
+        assert.doesNotMatch(bannerSource, /\$\{t\(.*·.*\$\{t\(/, 'No debe concatenar trozos de texto traducidos');
+      });
+
+      it('ListsScreen.tsx y ListDetailScreen.tsx usan OfflineBanner y almacenamiento offline', () => {
+        const listsSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListsScreen.tsx'), 'utf8');
+        const detailSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListDetailScreen.tsx'), 'utf8');
+
+        assert.match(listsSource, /OfflineBanner/);
+        assert.match(listsSource, /offlineStorage/);
+        assert.match(listsSource, /offlineQueue/);
+        assert.match(listsSource, /offlineDrafts/);
+
+        assert.match(detailSource, /OfflineBanner/);
+        assert.match(detailSource, /offlineStorage/);
+        assert.match(detailSource, /offlineQueue/);
+        assert.match(detailSource, /offlineDrafts/);
+      });
+
+      it('ListDetailScreen.tsx preserva recurrencia en onClose con itemsApi.close y alerta en guard sin conexión', () => {
+        const detailSource = fs.readFileSync(path.join(mobileSrcDir, 'screens/ListDetailScreen.tsx'), 'utf8');
+        assert.match(detailSource, /onClose=\{onCloseItem\}/, 'PurchasedRow debe llamar a onCloseItem');
+        assert.match(detailSource, /itemsApi\.close\(target\.id\)/, 'onCloseItem debe llamar a itemsApi.close');
+        assert.match(detailSource, /toggleAutoSortAisles/, 'Switch de pasillos debe tener soporte offline');
+        assert.match(detailSource, /offline\.actionUnavailable/, 'guard() debe alertar ante acciones no disponibles sin red');
+      });
+
+      it('AuthContext.tsx limpia datos locales con clearUserData al cerrar sesión y no borra sesión ante errores de red', () => {
+        const authSource = fs.readFileSync(path.join(mobileSrcDir, 'context/AuthContext.tsx'), 'utf8');
+        assert.match(authSource, /offlineStorage\.getLastActiveUserId/);
+        assert.match(authSource, /offlineStorage\.getProfile/);
+        assert.match(authSource, /offlineStorage\.clearUserData/);
+        assert.match(authSource, /err\.status === 401/);
+      });
+
+      it('client.ts implementa función isNetworkError con discriminación estricta', () => {
+        const clientSource = fs.readFileSync(path.join(mobileSrcDir, 'api/client.ts'), 'utf8');
+        assert.match(clientSource, /export function isNetworkError/);
+        assert.match(clientSource, /network request failed/);
+      });
     });
   });
 

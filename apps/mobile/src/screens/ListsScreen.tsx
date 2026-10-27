@@ -11,11 +11,15 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Field, ListTile, PlusGlyph } from '../components/ui';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { isNetworkError } from '../api/client';
 import { listsApi } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
+import { useOffline } from '../context/OfflineContext';
 import { useSocketEvent } from '../context/SocketContext';
+import { createTempId, offlineDrafts, offlineQueue, offlineStorage } from '../offline';
 import { colors, radius, shadow, spacing } from '../theme';
-import type { ListSummary, ListType } from '../types';
+import type { ListDetail, ListSummary, ListType } from '../types';
 import {
   getListCurrency,
   hasPositivePendingTotal,
@@ -28,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export function ListsScreen({ navigation }: any) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { setOnline, refreshPendingCount } = useOffline();
   // Margen de la barra del sistema de Android (de borde a borde)
   const insets = useSafeAreaInsets();
   const [lists, setLists] = useState<ListSummary[] | null>(null);
@@ -39,18 +44,59 @@ export function ListsScreen({ navigation }: any) {
   const [budget, setBudget] = useState('');
 
   const load = useCallback(async () => {
-    try {
-      setLists(await listsApi.all());
-    } catch {
-      setLists([]);
+    if (!user?.id) return;
+    const cached = await offlineStorage.getLists(user.id);
+    if (cached) {
+      setLists(cached);
     }
-  }, []);
+    try {
+      const fresh = await listsApi.all();
+      setLists(fresh);
+      await offlineStorage.saveLists(user.id, fresh);
+      setOnline(true);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        setOnline(false);
+        if (!cached) setLists([]);
+      } else {
+        if (!cached) setLists([]);
+      }
+    }
+  }, [user?.id, setOnline]);
 
   useEffect(() => {
     void load();
     const unsubscribe = navigation.addListener('focus', load);
     return unsubscribe;
   }, [load, navigation]);
+
+  // Restaurar borrador de creación si existe
+  useEffect(() => {
+    if (!user?.id) return;
+    void offlineDrafts
+      .getDraft<{ name: string; listType?: ListType; budget?: string }>(user.id, 'new_list')
+      .then((draft) => {
+        if (draft && draft.name) {
+          setName(draft.name);
+          if (draft.listType) setListType(draft.listType);
+          if (draft.budget) setBudget(draft.budget);
+          setShowForm(true);
+        }
+      });
+  }, [user?.id]);
+
+  const onDraftChange = (newName: string, newType: ListType, newBudget: string) => {
+    if (!user?.id) return;
+    if (newName.trim()) {
+      void offlineDrafts.saveDraft(user.id, 'new_list', {
+        name: newName,
+        listType: newType,
+        budget: newBudget,
+      });
+    } else {
+      void offlineDrafts.clearDraft(user.id, 'new_list');
+    }
+  };
 
   useSocketEvent('item:created', load);
   useSocketEvent('item:purchased', load);
@@ -70,11 +116,22 @@ export function ListsScreen({ navigation }: any) {
           text: t('detail.delete'),
           style: 'destructive',
           onPress: async () => {
+            if (!user?.id) return;
             try {
               await listsApi.remove(list.id);
               await load();
             } catch (error) {
-              Alert.alert(t('common.oops'), (error as Error).message || t('detail.failures.deleteList'));
+              if (isNetworkError(error)) {
+                setOnline(false);
+                await offlineQueue.enqueue(user.id, 'delete_list', { listId: list.id });
+                const currentLists = (lists ?? []).filter((l) => l.id !== list.id);
+                setLists(currentLists);
+                await offlineStorage.saveLists(user.id, currentLists);
+                await offlineStorage.removeListDetail(user.id, list.id);
+                void refreshPendingCount();
+              } else {
+                Alert.alert(t('common.oops'), (error as Error).message || t('detail.failures.deleteList'));
+              }
             }
           },
         },
@@ -83,24 +140,70 @@ export function ListsScreen({ navigation }: any) {
   };
 
   const create = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !user?.id) return;
     setCreating(true);
+    const parsedBudget = budget.trim() ? Number(budget.replace(',', '.')) : null;
+    const payload = {
+      name: name.trim(),
+      listType,
+      ...(listType === LIST_TYPE_ADVANCED && parsedBudget !== null && Number.isFinite(parsedBudget)
+        ? { budget: parsedBudget }
+        : {}),
+    };
+
     try {
-      const parsedBudget = budget.trim() ? Number(budget.replace(',', '.')) : null;
-      await listsApi.create({
-        name: name.trim(),
-        listType,
-        ...(listType === LIST_TYPE_ADVANCED && parsedBudget !== null && Number.isFinite(parsedBudget)
-          ? { budget: parsedBudget }
-          : {}),
-      });
+      await listsApi.create(payload);
+      await offlineDrafts.clearDraft(user.id, 'new_list');
       setName('');
       setBudget('');
       setListType(LIST_TYPE_NORMAL);
       setShowForm(false);
       await load();
     } catch (error) {
-      Alert.alert(t('common.oops'), (error as Error).message);
+      if (isNetworkError(error)) {
+        setOnline(false);
+        const tempId = createTempId('list');
+        const optimisticSummary: ListSummary = {
+          id: tempId,
+          name: payload.name,
+          description: null,
+          color: '#1d5b45',
+          icon: 'list',
+          ownerId: user.id,
+          isArchived: false,
+          isShared: false,
+          myRole: 'owner',
+          notifyOnChange: true,
+          listType: payload.listType ?? LIST_TYPE_NORMAL,
+          budget: (payload as any).budget ?? null,
+          pendingCount: 0,
+          purchasedCount: 0,
+          recurringCount: 0,
+          overdueCount: 0,
+          memberCount: 1,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const optimisticDetail: ListDetail = {
+          ...optimisticSummary,
+          pending: [],
+          purchased: [],
+          members: [],
+        };
+        await offlineQueue.enqueue(user.id, 'create_list', { tempId, ...payload });
+        const updatedLists = [optimisticSummary, ...(lists ?? [])];
+        setLists(updatedLists);
+        await offlineStorage.saveLists(user.id, updatedLists);
+        await offlineStorage.saveListDetail(user.id, tempId, optimisticDetail);
+        await offlineDrafts.clearDraft(user.id, 'new_list');
+        setName('');
+        setBudget('');
+        setListType(LIST_TYPE_NORMAL);
+        setShowForm(false);
+        void refreshPendingCount();
+      } else {
+        Alert.alert(t('common.oops'), (error as Error).message);
+      }
     } finally {
       setCreating(false);
     }
@@ -132,60 +235,81 @@ export function ListsScreen({ navigation }: any) {
           />
         }
         ListHeaderComponent={
-          showForm ? (
-            <View style={styles.form} testID="new-list-form">
-              <Field
-                label={t('lists.listName')}
-                testID="new-list-name"
-                value={name}
-                onChangeText={setName}
-                placeholder={t('lists.namePlaceholder')}
-                autoFocus
-              />
-              <Text style={styles.typeHeading}>{t('advancedList.typeLabel')}</Text>
-              <View style={styles.typeRow}>
-                <Pressable
-                  testID="list-type-normal"
-                  onPress={() => setListType(LIST_TYPE_NORMAL)}
-                  style={[styles.typeOption, listType === LIST_TYPE_NORMAL && styles.typeOptionActive]}
-                >
-                  <Text style={styles.typeTitle}>{t('advancedList.typeNormal')}</Text>
-                </Pressable>
-                <Pressable
-                  testID="list-type-advanced"
-                  onPress={() => setListType(LIST_TYPE_ADVANCED)}
-                  style={[styles.typeOption, listType === LIST_TYPE_ADVANCED && styles.typeOptionActive]}
-                >
-                  <Text style={styles.typeTitle}>{t('advancedList.typeAdvanced')}</Text>
-                </Pressable>
-              </View>
-              {listType === LIST_TYPE_ADVANCED && (
+          <>
+            <OfflineBanner />
+            {showForm ? (
+              <View style={styles.form} testID="new-list-form">
                 <Field
-                  label={t('advancedList.budgetLabel')}
-                  testID="new-list-budget"
-                  value={budget}
-                  onChangeText={setBudget}
-                  placeholder={t('advancedList.budgetLabel')}
-                  keyboardType="decimal-pad"
+                  label={t('lists.listName')}
+                  testID="new-list-name"
+                  value={name}
+                  onChangeText={(val) => {
+                    setName(val);
+                    onDraftChange(val, listType, budget);
+                  }}
+                  placeholder={t('lists.namePlaceholder')}
+                  autoFocus
                 />
-              )}
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <Button
-                  title={t('lists.create')}
-                  onPress={create}
-                  loading={creating}
-                  testID="new-list-submit"
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title={t('common.cancel')}
-                  variant="ghost"
-                  onPress={() => setShowForm(false)}
-                  style={{ flex: 1 }}
-                />
+                <Text style={styles.typeHeading}>{t('advancedList.typeLabel')}</Text>
+                <View style={styles.typeRow}>
+                  <Pressable
+                    testID="list-type-normal"
+                    onPress={() => {
+                      setListType(LIST_TYPE_NORMAL);
+                      onDraftChange(name, LIST_TYPE_NORMAL, budget);
+                    }}
+                    style={[styles.typeOption, listType === LIST_TYPE_NORMAL && styles.typeOptionActive]}
+                  >
+                    <Text style={styles.typeTitle}>{t('advancedList.typeNormal')}</Text>
+                  </Pressable>
+                  <Pressable
+                    testID="list-type-advanced"
+                    onPress={() => {
+                      setListType(LIST_TYPE_ADVANCED);
+                      onDraftChange(name, LIST_TYPE_ADVANCED, budget);
+                    }}
+                    style={[styles.typeOption, listType === LIST_TYPE_ADVANCED && styles.typeOptionActive]}
+                  >
+                    <Text style={styles.typeTitle}>{t('advancedList.typeAdvanced')}</Text>
+                  </Pressable>
+                </View>
+                {listType === LIST_TYPE_ADVANCED && (
+                  <Field
+                    label={t('advancedList.budgetLabel')}
+                    testID="new-list-budget"
+                    value={budget}
+                    onChangeText={(val) => {
+                      setBudget(val);
+                      onDraftChange(name, listType, val);
+                    }}
+                    placeholder={t('advancedList.budgetLabel')}
+                    keyboardType="decimal-pad"
+                  />
+                )}
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <Button
+                    title={t('lists.create')}
+                    onPress={create}
+                    loading={creating}
+                    testID="new-list-submit"
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title={t('common.cancel')}
+                    variant="ghost"
+                    onPress={() => {
+                      setShowForm(false);
+                      if (user?.id) void offlineDrafts.clearDraft(user.id, 'new_list');
+                      setName('');
+                      setBudget('');
+                      setListType(LIST_TYPE_NORMAL);
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                </View>
               </View>
-            </View>
-          ) : null
+            ) : null}
+          </>
         }
         ListEmptyComponent={
           <View style={styles.empty} testID="lists-empty">

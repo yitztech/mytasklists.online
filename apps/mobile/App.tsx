@@ -3,6 +3,7 @@ import './src/i18n';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
+import { OfflineProvider } from './src/context/OfflineContext';
 import { SocketProvider, useSocketEvent } from './src/context/SocketContext';
 import { PushProvider } from './src/context/PushContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -44,12 +45,14 @@ export default function App() {
       <StatusBar style="dark" />
       <UpdateGate>
         <AuthProvider>
-          <SocketProvider>
-            <PushProvider>
-              <RootNavigator />
-              <LiveNotifications />
-            </PushProvider>
-          </SocketProvider>
+          <OfflineProvider>
+            <SocketProvider>
+              <PushProvider>
+                <RootNavigator />
+                <LiveNotifications />
+              </PushProvider>
+            </SocketProvider>
+          </OfflineProvider>
         </AuthProvider>
       </UpdateGate>
     </SafeAreaProvider>
