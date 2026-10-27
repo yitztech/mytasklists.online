@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, GestureResponderHandlers, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Badge, CheckGlyph, GripVerticalGlyph, PencilGlyph, TrashGlyph } from './ui';
 import { colors, radius, shadow, spacing } from '../theme';
@@ -11,6 +11,8 @@ import { itemDates } from '../utils/item-dates';
 import { unitLabel } from '../utils/units';
 
 export const COMPLETION_ANIMATION_MS = 600;
+const ACTION_MOVE_UP = 'moveUp';
+const ACTION_MOVE_DOWN = 'moveDown';
 
 interface Props {
   item: Item;
@@ -26,6 +28,7 @@ interface Props {
   showPrice?: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
+  dragHandleProps?: GestureResponderHandlers | Record<string, unknown>;
   onDragStartItem?: (itemId: string) => void;
   onDragOverItem?: (itemId: string) => void;
   onDropItem?: (targetItemId: string, draggedItemId?: string) => void;
@@ -49,6 +52,7 @@ export function ItemRow({
   showPrice,
   isDragging,
   isDragOver,
+  dragHandleProps,
   onDragStartItem,
   onDragOverItem,
   onDropItem,
@@ -60,51 +64,7 @@ export function ItemRow({
   const checkScale = useRef(new Animated.Value(1)).current;
   const rowOpacity = useRef(new Animated.Value(1)).current;
   const rowSlide = useRef(new Animated.Value(0)).current;
-  const dragY = useRef(new Animated.Value(0)).current;
-  const lastStepY = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
-      onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dy) > 8,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => {
-        if (disabled || completing) return;
-        lastStepY.current = 0;
-        dragY.setValue(0);
-        onDragStartItem?.(item.id);
-      },
-      onPanResponderMove: (_, gesture) => {
-        if (disabled || completing) return;
-        const currentDelta = gesture.dy - lastStepY.current;
-        dragY.setValue(currentDelta);
-        const STEP_THRESHOLD = 50;
-        if (currentDelta < -STEP_THRESHOLD) {
-          lastStepY.current = gesture.dy;
-          Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
-          onMoveItem?.(item.id, -1);
-        } else if (currentDelta > STEP_THRESHOLD) {
-          lastStepY.current = gesture.dy;
-          Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
-          onMoveItem?.(item.id, 1);
-        }
-      },
-      onPanResponderRelease: (_, gesture) => {
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
-        onDragEndItem?.();
-        if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
-          onMoveItem?.(item.id, -1);
-        }
-      },
-      onPanResponderTerminate: () => {
-        Animated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 10 }).start();
-        onDragEndItem?.();
-      },
-    }),
-  ).current;
 
   useEffect(() => {
     return () => {
@@ -194,28 +154,28 @@ export function ItemRow({
         isDragOver && styles.rowDragOver,
         {
           opacity: rowOpacity,
-          transform: [
-            { translateX: rowSlide },
-            { translateY: isDragging ? dragY : 0 },
-          ],
+          transform: [{ translateX: rowSlide }],
         },
       ]}
     >
-      <Pressable
+      <View
         testID="item-drag-handle"
+        accessible={true}
         accessibilityRole="button"
         accessibilityLabel={item.name}
-        disabled={disabled || completing}
-        onPress={() => onMoveItem?.(item.id, -1)}
-        onLongPress={() => onMoveItem?.(item.id, 1)}
-        {...panResponder.panHandlers}
-        style={({ pressed }) => [
-          styles.dragHandle,
-          (pressed || isDragging) && styles.dragHandleActive,
+        accessibilityActions={[
+          { name: ACTION_MOVE_UP, label: t('detail.moveUp', 'Mover arriba') },
+          { name: ACTION_MOVE_DOWN, label: t('detail.moveDown', 'Mover abajo') },
         ]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === ACTION_MOVE_UP) onMoveItem?.(item.id, -1);
+          if (event.nativeEvent.actionName === ACTION_MOVE_DOWN) onMoveItem?.(item.id, 1);
+        }}
+        {...dragHandleProps}
+        style={[styles.dragHandle, isDragging && styles.dragHandleActive]}
       >
         <GripVerticalGlyph active={isDragging} />
-      </Pressable>
+      </View>
 
       <Pressable
         accessibilityRole="checkbox"
@@ -365,10 +325,10 @@ const styles = StyleSheet.create({
   },
   checkboxWrap: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dragHandle: {
-    minWidth: 28,
-    minHeight: 40,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
+    minWidth: 36,
+    minHeight: 48,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
