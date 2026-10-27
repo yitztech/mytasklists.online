@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Button, SectionLabel } from '../components/ui';
 import { ItemRow } from '../components/ItemRow';
 import { PurchasedRow } from '../components/PurchasedRow';
+import { SortableList } from '../components/SortableList';
 import { ItemPhotoPicker } from '../components/ItemPhotoPicker';
 import { SelectField } from '../components/SelectField';
 import { EditItemModal } from '../components/EditItemModal';
@@ -568,52 +569,54 @@ export function ListDetailScreen({ route, navigation }: any) {
                 ))}
               </View>
             ))
-          : list.pending.map((item, index) => (
-          <ItemRow
-            key={item.id}
-            item={item}
-            first={index === 0}
-            disabled={busy}
-            showDates={showDates}
-            showPrice={isAdvancedList(list)}
-            isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
-            isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
-            onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
-            onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
-            onEdit={setEditingItem}
-            onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
-            onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
-            onDropItem={(targetItemId, draggedItemId) => {
-              const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PENDING ? draggingItem.id : '');
-              setDraggingItem(null);
-              setDragOverItem(null);
-              if (sourceId) void reorderSectionItems(SECTION_PENDING, sourceId, targetItemId);
-            }}
-            onDragEndItem={() => {
-              setDraggingItem(null);
-              setDragOverItem(null);
-            }}
-            onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
-            onLongPress={(target: Item) =>
-              Alert.alert(target.name, t('detail.whatToDo'), [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                  text: t('detail.delete'),
-                  style: 'destructive',
-                  onPress: () => guard(() => itemsApi.remove(target.id)),
-                },
-                ...(target.isRecurring
-                  ? [
+          : (
+            <SortableList<Item>
+              items={list.pending}
+              style={{ gap: spacing.sm }}
+              disabled={busy}
+              onDragStart={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
+              onDragEnd={() => {
+                setDraggingItem(null);
+                setDragOverItem(null);
+              }}
+              onReorder={(fromId, toId) => reorderSectionItems(SECTION_PENDING, fromId, toId)}
+              renderItem={({ item, index, isDragging, isDragOver, dragHandleProps }) => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  first={index === 0}
+                  disabled={busy}
+                  showDates={showDates}
+                  showPrice={isAdvancedList(list)}
+                  isDragging={isDragging}
+                  isDragOver={isDragOver}
+                  dragHandleProps={dragHandleProps}
+                  onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
+                  onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
+                  onEdit={setEditingItem}
+                  onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
+                  onLongPress={(target: Item) =>
+                    Alert.alert(target.name, t('detail.whatToDo'), [
+                      { text: t('common.cancel'), style: 'cancel' },
                       {
-                        text: t('detail.advance'),
-                        onPress: () => guard(() => itemsApi.advanceClock(target.id, 14)),
+                        text: t('detail.delete'),
+                        style: 'destructive',
+                        onPress: () => guard(() => itemsApi.remove(target.id)),
                       },
-                    ]
-                  : []),
-              ])
-            }
-          />
-        ))}
+                      ...(target.isRecurring
+                        ? [
+                            {
+                              text: t('detail.advance'),
+                              onPress: () => guard(() => itemsApi.advanceClock(target.id, 14)),
+                            },
+                          ]
+                        : []),
+                    ])
+                  }
+                />
+              )}
+            />
+          )}
         {list.pending.length === 0 && (
           <Text style={styles.emptyText} testID="pending-empty">
             {t('detail.allDone')}
@@ -626,34 +629,34 @@ export function ListDetailScreen({ route, navigation }: any) {
         <>
           <SectionLabel>{t('detail.purchasedHeading', { count: list.purchased.length })}</SectionLabel>
           <View testID="purchased-list" style={styles.sheet}>
-            {list.purchased.map((item, index) => (
-              <PurchasedRow
-                key={item.id}
-                item={item}
-                first={index === 0}
-                disabled={busy}
-                showDates={showDates}
-                showPrice={isAdvancedList(list)}
-                isDragging={draggingItem?.section === SECTION_PURCHASED && draggingItem.id === item.id}
-                isDragOver={dragOverItem?.section === SECTION_PURCHASED && dragOverItem.id === item.id}
-                onRestore={(target) => guard(() => itemsApi.restore(target.id))}
-                onClose={(target) => guard(() => itemsApi.close(target.id))}
-                onEdit={setEditingItem}
-                onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PURCHASED, id: itemId })}
-                onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PURCHASED, id: itemId })}
-                onDropItem={(targetItemId, draggedItemId) => {
-                  const sourceId = draggedItemId ?? (draggingItem?.section === SECTION_PURCHASED ? draggingItem.id : '');
-                  setDraggingItem(null);
-                  setDragOverItem(null);
-                  if (sourceId) void reorderSectionItems(SECTION_PURCHASED, sourceId, targetItemId);
-                }}
-                onDragEndItem={() => {
-                  setDraggingItem(null);
-                  setDragOverItem(null);
-                }}
-                onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PURCHASED, itemId, direction)}
-              />
-            ))}
+            <SortableList<Item>
+              items={list.purchased}
+              style={{ gap: spacing.sm }}
+              disabled={busy}
+              onDragStart={(itemId) => setDraggingItem({ section: SECTION_PURCHASED, id: itemId })}
+              onDragEnd={() => {
+                setDraggingItem(null);
+                setDragOverItem(null);
+              }}
+              onReorder={(fromId, toId) => reorderSectionItems(SECTION_PURCHASED, fromId, toId)}
+              renderItem={({ item, index, isDragging, isDragOver, dragHandleProps }) => (
+                <PurchasedRow
+                  key={item.id}
+                  item={item}
+                  first={index === 0}
+                  disabled={busy}
+                  showDates={showDates}
+                  showPrice={isAdvancedList(list)}
+                  isDragging={isDragging}
+                  isDragOver={isDragOver}
+                  dragHandleProps={dragHandleProps}
+                  onRestore={(target) => guard(() => itemsApi.restore(target.id))}
+                  onClose={(target) => guard(() => itemsApi.close(target.id))}
+                  onEdit={setEditingItem}
+                  onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PURCHASED, itemId, direction)}
+                />
+              )}
+            />
           </View>
         </>
       )}
