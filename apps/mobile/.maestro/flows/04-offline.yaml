@@ -1,0 +1,68 @@
+appId: online.mytasklists.app
+name: Offline · consultar listas y guardar cambios sin conexión
+---
+- runFlow: ../subflows/abrir-sin-sesion.yaml
+- runFlow: ../subflows/iniciar-sesion.yaml
+
+# 1. Comprobar que la app carga listas sin bloquear
+- extendedWaitUntil:
+    visible:
+      id: lists-screen
+    timeout: 15000
+
+# 2. Crear una lista (borrador y encolado si no hay conexión)
+- tapOn:
+    id: new-list-button
+- tapOn:
+    id: new-list-name
+- inputText: Supermercado Semanal
+- hideKeyboard
+- tapOn:
+    id: new-list-submit
+
+- extendedWaitUntil:
+    visible: Supermercado Semanal
+    timeout: 15000
+
+# 3. Entrar a la lista y agregar un producto
+- tapOn: Supermercado Semanal
+- extendedWaitUntil:
+    visible:
+      id: list-detail-screen
+    timeout: 20000
+
+- tapOn:
+    id: item-name-input
+- inputText: Leche Deslactosada
+- hideKeyboard
+- tapOn:
+    id: add-item-button
+
+- scrollUntilVisible:
+    element:
+      id: pending-item
+    direction: DOWN
+    timeout: 10000
+- assertVisible: Leche Deslactosada
+
+# 4. Comprar producto
+- tapOn:
+    id: item-checkbox
+- runFlow:
+    when:
+      visible: ¿Qué quieres hacer\?
+    commands:
+      - tapOn: (?i)cancelar
+      - tapOn:
+          id: item-checkbox
+
+- scrollUntilVisible:
+    element:
+      id: purchased-item
+    direction: DOWN
+    timeout: 20000
+
+# 5. Archivar producto comprado (onClose no elimina la recurrencia)
+- tapOn:
+    id: purchased-close
+- takeScreenshot: offline-flujo-completado

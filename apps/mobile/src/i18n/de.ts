@@ -246,4 +246,13 @@ export const de: Catalog<typeof es> = {
     receiptApply: 'Käufe anwenden',
     receiptDone: 'Kassenbon angewendet ({{count}} gekauft).',
   },
+  offline: {
+    banner: 'Offline',
+    syncing: 'Änderungen werden synchronisiert...',
+    bannerPending: 'Offline · {{count}} Änderung(en) lokal gespeichert',
+    pendingCount: '{{count}} Änderung(en) lokal gespeichert',
+    actionUnavailable: 'Diese Aktion erfordert eine Internetverbindung.',
+    actionUnavailableTitle: 'Offline',
+    allSynced: 'Alles synchronisiert',
+  },
 };

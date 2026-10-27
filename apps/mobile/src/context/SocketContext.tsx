@@ -11,6 +11,7 @@ import { io, type Socket } from 'socket.io-client';
 import type { ServerEventName, ServerEvents } from '@lista/contracts';
 import { SOCKET_URL, tokens, api } from '../api/client';
 import { useAuth } from './AuthContext';
+import { useOffline } from './OfflineContext';
 
 interface Value {
   socket: Socket | null;
@@ -22,6 +23,7 @@ const SocketContext = createContext<Value>({ socket: null, connected: false });
 /** Conexión en vivo con el backend mientras haya sesión iniciada */
 export function SocketProvider({ children }: { children: ReactNode }) {
   const { accessToken, user } = useAuth();
+  const { setOnline } = useOffline();
   const [connected, setConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const [, force] = useState(0);
@@ -42,7 +44,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       auth: (callback) => callback({ token: tokens.access ?? accessToken }),
       reconnection: true,
     });
-    socket.on('connect', () => setConnected(true));
+    socket.on('connect', () => {
+      setConnected(true);
+      setOnline(true);
+    });
     let disposed = false;
     let recovering = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,10 +69,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     };
     socket.on('disconnect', reason => {
       setConnected(false);
+      setOnline(false);
       if (reason === 'io server disconnect') void recover();
     });
     socket.on('connect_error', error => {
       setConnected(false);
+      setOnline(false);
       if (/token|sesión|session/i.test(error.message)) { socket.disconnect(); void recover(); }
     });
 

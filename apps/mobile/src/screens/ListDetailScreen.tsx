@@ -23,8 +23,19 @@ import { SortableList } from '../components/SortableList';
 import { ItemPhotoPicker } from '../components/ItemPhotoPicker';
 import { SelectField } from '../components/SelectField';
 import { EditItemModal } from '../components/EditItemModal';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { isNetworkError } from '../api/client';
 import { itemsApi, listsApi, type PendingInvitation } from '../api/endpoints';
 import { useSocket, useSocketEvent } from '../context/SocketContext';
+import { useOffline } from '../context/OfflineContext';
+import {
+  createTempId,
+  getItemDraftKey,
+  offlineDrafts,
+  offlineQueue,
+  offlineStorage,
+  type MutationType,
+} from '../offline';
 import { colors, radius, shadow, spacing } from '../theme';
 import type { Item, ListDetail } from '../types';
 import {
@@ -51,6 +62,7 @@ export function ListDetailScreen({ route, navigation }: any) {
   const listId: string = route.params.id;
   const { socket } = useSocket();
   const { user } = useAuth();
+  const { setOnline, refreshPendingCount } = useOffline();
   // Android dibuja de borde a borde: sin este margen, la barra del sistema tapa el último producto
   const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<PendingInvitation[]>([]);
@@ -108,18 +120,75 @@ export function ListDetailScreen({ route, navigation }: any) {
   };
 
   const load = useCallback(async () => {
+    if (!user?.id) return;
+    const cached = await offlineStorage.getListDetail(user.id, listId);
+    if (cached) {
+      setList(cached);
+      navigation.setOptions({ title: cached.name });
+    }
     try {
       const detail = await listsApi.detail(listId);
       setList(detail);
       navigation.setOptions({ title: detail.name });
-    } catch {
-      Alert.alert(t('detail.loadFailed'));
+      await offlineStorage.saveListDetail(user.id, listId, detail);
+      setOnline(true);
+    } catch (err) {
+      if (isNetworkError(err)) {
+        setOnline(false);
+      } else if (!cached) {
+        Alert.alert(t('detail.loadFailed'));
+      }
     }
-  }, [listId, navigation, t]);
+  }, [listId, navigation, t, user?.id, setOnline]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Restaurar borrador de producto si existe
+  useEffect(() => {
+    if (!user?.id) return;
+    const draftKey = getItemDraftKey(listId);
+    void offlineDrafts
+      .getDraft<any>(user.id, draftKey)
+      .then((draft) => {
+        if (draft && draft.name) {
+          setName(draft.name);
+          if (draft.quantity) setQuantity(draft.quantity);
+          if (draft.unit) setUnit(draft.unit);
+          if (draft.customUnit) setCustomUnit(draft.customUnit);
+          if (draft.estimatedPrice) setEstimatedPrice(draft.estimatedPrice);
+          if (draft.isRecurring !== undefined) setIsRecurring(draft.isRecurring);
+          if (draft.recurrenceDays) setRecurrenceDays(draft.recurrenceDays);
+        }
+      });
+  }, [user?.id, listId]);
+
+  const onDraftChange = (
+    draftName: string,
+    draftQty: string,
+    draftUnit: string,
+    draftCustomUnit: string,
+    draftPrice: string,
+    draftRecurring: boolean,
+    draftDays: number,
+  ) => {
+    if (!user?.id) return;
+    const draftKey = getItemDraftKey(listId);
+    if (draftName.trim()) {
+      void offlineDrafts.saveDraft(user.id, draftKey, {
+        name: draftName,
+        quantity: draftQty,
+        unit: draftUnit,
+        customUnit: draftCustomUnit,
+        estimatedPrice: draftPrice,
+        isRecurring: draftRecurring,
+        recurrenceDays: draftDays,
+      });
+    } else {
+      void offlineDrafts.clearDraft(user.id, draftKey);
+    }
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -193,22 +262,216 @@ export function ListDetailScreen({ route, navigation }: any) {
     setBusy(true);
     try {
       await action();
+      setOnline(true);
       await load();
     } catch (error) {
-      Alert.alert(t('common.oops'), (error as Error).message);
+      if (isNetworkError(error)) {
+        setOnline(false);
+        Alert.alert(t('offline.actionUnavailableTitle'), t('offline.actionUnavailable'));
+      } else {
+        Alert.alert(t('common.oops'), (error as Error).message);
+      }
     } finally {
       setBusy(false);
     }
   };
 
+  const performItemAction = async (
+    target: Item,
+    action: 'purchase' | 'restore' | 'close' | 'delete',
+  ) => {
+    if (!list || !user?.id) return;
+    setBusy(true);
+
+    let updatedDetail: ListDetail = list;
+    if (action === 'purchase') {
+      const item = list.pending.find((it) => it.id === target.id) ?? target;
+      updatedDetail = {
+        ...list,
+        pending: list.pending.filter((it) => it.id !== target.id),
+        purchased: [{ ...item, status: 'purchased', purchasedAt: new Date().toISOString() }, ...list.purchased],
+        pendingCount: Math.max(0, (list.pendingCount ?? 0) - 1),
+      };
+    } else if (action === 'restore') {
+      const item = list.purchased.find((it) => it.id === target.id) ?? target;
+      updatedDetail = {
+        ...list,
+        purchased: list.purchased.filter((it) => it.id !== target.id),
+        pending: [{ ...item, status: 'pending', purchasedAt: null }, ...list.pending],
+        pendingCount: (list.pendingCount ?? 0) + 1,
+      };
+    } else if (action === 'close') {
+      updatedDetail = {
+        ...list,
+        purchased: list.purchased.filter((it) => it.id !== target.id),
+      };
+    } else if (action === 'delete') {
+      const inPending = list.pending.some((it) => it.id === target.id);
+      updatedDetail = {
+        ...list,
+        pending: list.pending.filter((it) => it.id !== target.id),
+        purchased: list.purchased.filter((it) => it.id !== target.id),
+        pendingCount: inPending ? Math.max(0, (list.pendingCount ?? 0) - 1) : list.pendingCount,
+      };
+    }
+
+    setList(updatedDetail);
+    await offlineStorage.saveListDetail(user.id, listId, updatedDetail);
+
+    try {
+      if (action === 'purchase') await itemsApi.purchase(target.id);
+      else if (action === 'restore') await itemsApi.restore(target.id);
+      else if (action === 'close') await itemsApi.close(target.id);
+      else if (action === 'delete') await itemsApi.remove(target.id);
+      setOnline(true);
+      await load();
+    } catch (error) {
+      if (isNetworkError(error)) {
+        setOnline(false);
+        let mutationType: MutationType = 'delete_item';
+        if (action === 'purchase') {
+          mutationType = 'purchase_item';
+        } else if (action === 'restore') {
+          mutationType = 'restore_item';
+        } else if (action === 'close') {
+          mutationType = 'close_item';
+        }
+        await offlineQueue.enqueue(user.id, mutationType, { itemId: target.id, listId });
+        void refreshPendingCount();
+      } else {
+        Alert.alert(t('common.oops'), (error as Error).message);
+        await load();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onPurchaseItem = useCallback((target: Item) => { void performItemAction(target, 'purchase'); }, [performItemAction]);
+  const onRestoreItem = useCallback((target: Item) => { void performItemAction(target, 'restore'); }, [performItemAction]);
+  const onCloseItem = useCallback((target: Item) => { void performItemAction(target, 'close'); }, [performItemAction]);
+  const onDeleteItem = useCallback((target: Item) => { void performItemAction(target, 'delete'); }, [performItemAction]);
+
+  const toggleAutoSortAisles = async (value: boolean) => {
+    if (!list || !user?.id) return;
+    const updatedDetail: ListDetail = { ...list, autoSortAisles: value };
+    setList(updatedDetail);
+    await offlineStorage.saveListDetail(user.id, listId, updatedDetail);
+    try {
+      await listsApi.update(listId, { autoSortAisles: value });
+      setOnline(true);
+      await load();
+    } catch (error) {
+      if (isNetworkError(error)) {
+        setOnline(false);
+        await offlineQueue.enqueue(user.id, 'update_list', { listId, autoSortAisles: value });
+        void refreshPendingCount();
+      } else {
+        Alert.alert(t('common.oops'), (error as Error).message);
+        await load();
+      }
+    }
+  };
+
   const addItem = async () => {
-    if (!name.trim() || busy) return;
+    if (!name.trim() || busy || !user?.id) return;
     const amount=Number(quantity.replace(',','.'));const selected=unit===CUSTOM_UNIT?customUnit.trim():unit;
     if(!Number.isFinite(amount)||amount<0.01||amount>99999||Math.abs(Math.round(amount*100)-amount*100)>1e-7||!selected||selected.length>20){Alert.alert(t('common.oops'),t('detail.invalidQuantity'));return;}
     const parsedPrice = estimatedPrice.trim() ? Number(estimatedPrice.replace(',', '.')) : null;
+    const payload = {
+      name: name.trim(),
+      quantity: amount,
+      unit: selected,
+      isRecurring,
+      ...(isRecurring ? { recurrenceDays } : {}),
+      ...(parsedPrice !== null && Number.isFinite(parsedPrice) && parsedPrice >= 0
+        ? { estimatedPrice: parsedPrice }
+        : {}),
+    };
+
+    const draftKey = getItemDraftKey(listId);
     setBusy(true);
-    try {const created=await itemsApi.create(listId,{name:name.trim(),quantity:amount,unit:selected,isRecurring,...(isRecurring?{recurrenceDays}:{}),...(parsedPrice!==null&&Number.isFinite(parsedPrice)&&parsedPrice>=0?{estimatedPrice:parsedPrice}:{})});const selectedPhoto=photo;setName('');setEstimatedPrice('');setQuantity('1');setUnit('pza');setCustomUnit('');setPhoto(null);if(selectedPhoto){try{await itemsApi.uploadImage(created.id,await itemImageForm(selectedPhoto));}catch{Alert.alert(t('detail.itemAdded'),t('detail.photoUploadFailed'));}}await load();}
-    catch(e){Alert.alert(t('common.oops'),(e as Error).message);}finally{setBusy(false);}
+    try {
+      const created = await itemsApi.create(listId, payload);
+      const selectedPhoto = photo;
+      setName('');
+      setEstimatedPrice('');
+      setQuantity('1');
+      setUnit('pza');
+      setCustomUnit('');
+      setPhoto(null);
+      await offlineDrafts.clearDraft(user.id, draftKey);
+      if (selectedPhoto) {
+        try {
+          await itemsApi.uploadImage(created.id, await itemImageForm(selectedPhoto));
+        } catch {
+          Alert.alert(t('detail.itemAdded'), t('detail.photoUploadFailed'));
+        }
+      }
+      setOnline(true);
+      await load();
+    } catch (e) {
+      if (isNetworkError(e)) {
+        setOnline(false);
+        const tempId = createTempId('item');
+        const optimisticItem: Item = {
+          id: tempId,
+          listId,
+          name: payload.name,
+          quantity: payload.quantity,
+          unit: payload.unit,
+          note: null,
+          category: 'general',
+          imageUrl: null,
+          status: 'pending',
+          isRecurring: payload.isRecurring ?? false,
+          recurrenceDays: payload.recurrenceDays ?? 14,
+          activatedAt: new Date().toISOString(),
+          dueAt: null,
+          nextActivationAt: null,
+          purchasedAt: null,
+          purchasedById: null,
+          purchasedByName: null,
+          lastPurchasedAt: null,
+          cycleCount: 0,
+          createdById: user.id,
+          createdByName: user.fullName,
+          sortOrder: list ? list.pending.length : 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          editedAt: null,
+          isOverdue: false,
+          daysOverdue: 0,
+          daysUntilDue: null,
+          daysUntilReactivation: null,
+          estimatedPrice: payload.estimatedPrice ?? null,
+          lastPaidPrice: null,
+          storeName: null,
+        };
+        await offlineQueue.enqueue(user.id, 'create_item', { tempId, listId, ...payload });
+        if (list) {
+          const updatedDetail: ListDetail = {
+            ...list,
+            pending: [optimisticItem, ...list.pending],
+            pendingCount: (list.pendingCount ?? 0) + 1,
+          };
+          setList(updatedDetail);
+          await offlineStorage.saveListDetail(user.id, listId, updatedDetail);
+        }
+        setName('');
+        setEstimatedPrice('');
+        setQuantity('1');
+        setUnit('pza');
+        setCustomUnit('');
+        setPhoto(null);
+        await offlineDrafts.clearDraft(user.id, draftKey);
+        void refreshPendingCount();
+      } else {
+        Alert.alert(t('common.oops'), (e as Error).message);
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submitSmartEntry = async () => {
@@ -253,10 +516,19 @@ export function ListDetailScreen({ route, navigation }: any) {
 
       try {
         await itemsApi.reorder(listId, nextIds);
+        setOnline(true);
         await load();
       } catch (error) {
-        Alert.alert(t('common.oops'), (error as Error).message);
-        await load();
+        if (isNetworkError(error)) {
+          setOnline(false);
+          if (user?.id) {
+            await offlineQueue.enqueue(user.id, 'reorder_items', { listId, itemIds: nextIds });
+            void refreshPendingCount();
+          }
+        } else {
+          Alert.alert(t('common.oops'), (error as Error).message);
+          await load();
+        }
       }
     },
     [list, listId, load, t],
@@ -303,6 +575,7 @@ export function ListDetailScreen({ route, navigation }: any) {
         />
       }
     >
+      <OfflineBanner />
       {/* ── Alta de producto ─────────────────────────────────────────── */}
       <View style={styles.addCard} testID="add-item-form">
         <TextInput
@@ -312,16 +585,51 @@ export function ListDetailScreen({ route, navigation }: any) {
           placeholder={t('detail.addPlaceholder')}
           placeholderTextColor={colors.muted}
           value={name}
-          onChangeText={setName}
+          onChangeText={(val) => {
+            setName(val);
+            onDraftChange(val, quantity, unit, customUnit, estimatedPrice, isRecurring, recurrenceDays);
+          }}
           onSubmitEditing={addItem}
           returnKeyType="done"
         />
 
         <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('detail.quantity')}</Text>
-        <TextInput accessibilityLabel={t('detail.quantity')} style={styles.addInput} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" testID="item-quantity-input"/>
+        <TextInput
+          accessibilityLabel={t('detail.quantity')}
+          style={styles.addInput}
+          value={quantity}
+          onChangeText={(val) => {
+            setQuantity(val);
+            onDraftChange(name, val, unit, customUnit, estimatedPrice, isRecurring, recurrenceDays);
+          }}
+          keyboardType="decimal-pad"
+          testID="item-quantity-input"
+        />
         <Text style={{color:colors.ink}}>{t('detail.unit')}</Text>
-        <SelectField label={t('detail.unit')} value={unit} onChange={setUnit} testID="item-unit-input" options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:CUSTOM_UNIT}]}/>
-        {unit===CUSTOM_UNIT && <TextInput accessibilityLabel={t('detail.unitName')} style={styles.addInput} value={customUnit} onChangeText={setCustomUnit} maxLength={20} placeholder={t('detail.unitName')} testID="item-custom-unit"/>}
+        <SelectField
+          label={t('detail.unit')}
+          value={unit}
+          onChange={(val) => {
+            setUnit(val);
+            onDraftChange(name, quantity, val, customUnit, estimatedPrice, isRecurring, recurrenceDays);
+          }}
+          testID="item-unit-input"
+          options={[...localizedUnits(i18n.language), {label:t('detail.customUnit'),value:CUSTOM_UNIT}]}
+        />
+        {unit===CUSTOM_UNIT && (
+          <TextInput
+            accessibilityLabel={t('detail.unitName')}
+            style={styles.addInput}
+            value={customUnit}
+            onChangeText={(val) => {
+              setCustomUnit(val);
+              onDraftChange(name, quantity, unit, val, estimatedPrice, isRecurring, recurrenceDays);
+            }}
+            maxLength={20}
+            placeholder={t('detail.unitName')}
+            testID="item-custom-unit"
+          />
+        )}
         {isAdvancedList(list) && (
           <>
             <Text style={{color:colors.ink,marginTop:spacing.md}}>{t('advancedList.estimatedPriceLabel')}</Text>
@@ -329,7 +637,10 @@ export function ListDetailScreen({ route, navigation }: any) {
               accessibilityLabel={t('advancedList.estimatedPriceLabel')}
               style={styles.addInput}
               value={estimatedPrice}
-              onChangeText={setEstimatedPrice}
+              onChangeText={(val) => {
+                setEstimatedPrice(val);
+                onDraftChange(name, quantity, unit, customUnit, val, isRecurring, recurrenceDays);
+              }}
               keyboardType="decimal-pad"
               placeholder={t('advancedList.estimatedPriceLabel')}
               testID="item-estimated-price-input"
@@ -342,7 +653,10 @@ export function ListDetailScreen({ route, navigation }: any) {
           <Switch
             testID="item-recurring-switch"
             value={isRecurring}
-            onValueChange={setIsRecurring}
+            onValueChange={(val) => {
+              setIsRecurring(val);
+              onDraftChange(name, quantity, unit, customUnit, estimatedPrice, val, recurrenceDays);
+            }}
             trackColor={{ true: colors.brand, false: colors.lineStrong }}
           />
         </View>
@@ -353,7 +667,10 @@ export function ListDetailScreen({ route, navigation }: any) {
               <Pressable
                 key={days}
                 testID={`recurrence-preset-${days}`}
-                onPress={() => setRecurrenceDays(days)}
+                onPress={() => {
+                  setRecurrenceDays(days);
+                  onDraftChange(name, quantity, unit, customUnit, estimatedPrice, isRecurring, days);
+                }}
                 style={[styles.preset, recurrenceDays === days && styles.presetActive]}
               >
                 <Text
@@ -415,7 +732,7 @@ export function ListDetailScreen({ route, navigation }: any) {
             <Switch
               testID="aisle-sort-switch"
               value={Boolean(list.autoSortAisles)}
-              onValueChange={(value) => guard(() => listsApi.update(listId, { autoSortAisles: value }))}
+              onValueChange={toggleAutoSortAisles}
               trackColor={{ true: colors.brand, false: colors.lineStrong }}
             />
           </View>
@@ -549,8 +866,8 @@ export function ListDetailScreen({ route, navigation }: any) {
                     showPrice={isAdvancedList(list)}
                     isDragging={draggingItem?.section === SECTION_PENDING && draggingItem.id === item.id}
                     isDragOver={dragOverItem?.section === SECTION_PENDING && dragOverItem.id === item.id}
-                    onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
-                    onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
+                    onPurchase={onPurchaseItem}
+                    onDelete={onDeleteItem}
                     onEdit={setEditingItem}
                     onDragStartItem={(itemId) => setDraggingItem({ section: SECTION_PENDING, id: itemId })}
                     onDragOverItem={(itemId) => setDragOverItem({ section: SECTION_PENDING, id: itemId })}
@@ -591,8 +908,8 @@ export function ListDetailScreen({ route, navigation }: any) {
                   isDragging={isDragging}
                   isDragOver={isDragOver}
                   dragHandleProps={dragHandleProps}
-                  onPurchase={(target: Item) => guard(() => itemsApi.purchase(target.id))}
-                  onDelete={(target: Item) => guard(() => itemsApi.remove(target.id))}
+                  onPurchase={onPurchaseItem}
+                  onDelete={onDeleteItem}
                   onEdit={setEditingItem}
                   onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PENDING, itemId, direction)}
                   onLongPress={(target: Item) =>
@@ -601,7 +918,7 @@ export function ListDetailScreen({ route, navigation }: any) {
                       {
                         text: t('detail.delete'),
                         style: 'destructive',
-                        onPress: () => guard(() => itemsApi.remove(target.id)),
+                        onPress: () => { void performItemAction(target, 'delete'); },
                       },
                       ...(target.isRecurring
                         ? [
@@ -650,8 +967,8 @@ export function ListDetailScreen({ route, navigation }: any) {
                   isDragging={isDragging}
                   isDragOver={isDragOver}
                   dragHandleProps={dragHandleProps}
-                  onRestore={(target) => guard(() => itemsApi.restore(target.id))}
-                  onClose={(target) => guard(() => itemsApi.close(target.id))}
+                  onRestore={onRestoreItem}
+                  onClose={onCloseItem}
                   onEdit={setEditingItem}
                   onMoveItem={(itemId, direction) => moveSectionItemByStep(SECTION_PURCHASED, itemId, direction)}
                 />

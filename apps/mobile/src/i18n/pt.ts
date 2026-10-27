@@ -246,4 +246,13 @@ export const pt: Catalog<typeof es> = {
     receiptApply: 'Aplicar compras',
     receiptDone: 'Cupom aplicado ({{count}} comprados).',
   },
+  offline: {
+    banner: 'Offline',
+    syncing: 'Sincronizando alterações...',
+    bannerPending: 'Offline · {{count}} alteração(ões) salva(s) localmente',
+    pendingCount: '{{count}} alteração(ões) salva(s) localmente',
+    actionUnavailable: 'Esta ação requer uma conexão com a internet.',
+    actionUnavailableTitle: 'Offline',
+    allSynced: 'Tudo sincronizado',
+  },
 };

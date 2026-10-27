@@ -9,9 +9,10 @@ import React, {
   type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { onSessionExpired, tokens } from '../api/client';
+import { ApiError, onSessionExpired, tokens } from '../api/client';
 import { authApi, usersApi } from '../api/endpoints';
 import { currentLanguage, setLanguage, type Language } from '../i18n';
+import { offlineStorage } from '../offline';
 import type { AuthResponse, LoginResponse, User } from '../types';
 
 /** Sesión iniciada o reto de 2FA pendiente */
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const bootstrap = async () => {
       await tokens.load();
+      const lastUserId = await offlineStorage.getLastActiveUserId();
       if (!tokens.access) {
         if (!cancelled) setLoading(false);
         return;
@@ -83,9 +85,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setUser(me);
           setAccessToken(tokens.access);
+          if (me?.id) {
+            await offlineStorage.setLastActiveUserId(me.id);
+            await offlineStorage.saveProfile(me.id, me);
+          }
         }
-      } catch {
-        await tokens.clear();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          await tokens.clear();
+          await offlineStorage.setLastActiveUserId(null);
+          if (lastUserId) {
+            await offlineStorage.clearUserData(lastUserId);
+          }
+        } else if (lastUserId) {
+          // Sin conexión: cargar perfil seguro desde el almacenamiento local
+          const cachedUser = await offlineStorage.getProfile(lastUserId);
+          if (cachedUser && !cancelled) {
+            setUser(cachedUser);
+            setAccessToken(tokens.access);
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -100,6 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await tokens.save(result.accessToken, result.refreshToken);
     setAccessToken(result.accessToken);
     setUser(result.user);
+    if (result.user?.id) {
+      await offlineStorage.setLastActiveUserId(result.user.id);
+      await offlineStorage.saveProfile(result.user.id, result.user);
+    }
   }, []);
 
   const handle = useCallback(
@@ -123,16 +146,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         handle(await authApi.apple(identityToken, fullName)),
       refreshUser: async () => setUser(await authApi.me()),
       logout: async () => {
+        const currentUserId = user?.id || (await offlineStorage.getLastActiveUserId());
         try {
           await authApi.logout(tokens.refresh);
         } catch {
           /* la sesión local se limpia igualmente */
         }
         await tokens.clear();
+        await offlineStorage.setLastActiveUserId(null);
+        if (currentUserId) {
+          await offlineStorage.clearUserData(currentUserId);
+        }
         clear();
       },
       forgetSession: async () => {
+        const currentUserId = user?.id || (await offlineStorage.getLastActiveUserId());
         await tokens.clear();
+        await offlineStorage.setLastActiveUserId(null);
+        if (currentUserId) {
+          await offlineStorage.clearUserData(currentUserId);
+        }
         clear();
       },
     }),
