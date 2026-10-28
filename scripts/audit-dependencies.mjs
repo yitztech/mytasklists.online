@@ -5,7 +5,7 @@ import fs from 'node:fs';
 // low severity: only @expo/config 57 merges the project's own app config with it, never app input).
 // They do not suppress new advisories, package changes or the backend dependency audit.
 const accepted = new Map([
-  ['GHSA-gcqx-w48m-w2h4', {name:'deepmerge', until:'2026-10-31'}],
+  ['GHSA-gcqx-w48m-w2h4', {name:'deepmerge', until:'2026-11-30'}],
 ]);
 let failed=false;
 for (const cwd of ['.', 'apps/mobile']) {
