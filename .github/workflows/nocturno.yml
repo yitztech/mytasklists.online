@@ -1,0 +1,42 @@
+# Verificación nocturna (AUDITORIA SEG-08 de la plataforma): ZAP pasivo contra la pila de main,
+# para ver avisos nuevos aunque no haya cambios. Workflow aparte del CI a propósito: un CI de main
+# en verde dispara deploy.yml (workflow_run) y este no debe desplegar nada.
+name: Nocturno
+
+on:
+  # Hora escalonada con los demás proyectos por el tope de jobs simultáneos de la organización
+  schedule:
+    - cron: "20 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: ZAP baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Construir y levantar la pila
+        run: |
+          cp .env.example .env
+          docker compose up -d --build --wait
+      # Falla con cualquier aviso nuevo; las excepciones, con su motivo, en tests/security/zap-reglas.tsv
+      - name: ZAP baseline
+        timeout-minutes: 6
+        run: |
+          mkdir -p zap && cp tests/security/zap-reglas.tsv zap/ && chmod -R 777 zap
+          docker run --rm --network container:lc-nginx -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0 \
+            zap-baseline.py -t http://127.0.0.1 -c zap-reglas.tsv -r zap.html
+      - name: Logs de la pila
+        if: failure()
+        run: docker compose logs --no-color | tail -n 300
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: zap
+          path: zap/zap.html
+          if-no-files-found: ignore
+          retention-days: 14

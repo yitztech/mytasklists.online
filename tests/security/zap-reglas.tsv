@@ -1,0 +1,6 @@
+10027	IGNORE	(Falso positivo: palabras como TODO o ADMIN dentro del código minificado del router, no comentarios)
+10049	IGNORE	(El HTML de las SPA y la landing va con no-cache/no-store a propósito para que una versión nueva se vea al momento; los assets con hash sí se cachean)
+10055	IGNORE	(style-src 'unsafe-inline' por los estilos en línea de React e img-src https: por las imágenes de los ítems; los scripts no admiten inline)
+10109	IGNORE	(Informativo: app y panel son SPA)
+10202	IGNORE	(CSRF: el único formulario HTML es la suscripción anónima a la newsletter de la landing, enviada con fetch; no hay sesión que falsificar. Los formularios de app y panel son de la SPA)
+90004	IGNORE	(Sin COEP: bloquearía Umami y las imágenes externas; no se usa SharedArrayBuffer)
