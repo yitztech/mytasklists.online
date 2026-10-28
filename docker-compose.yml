@@ -46,6 +46,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lista} -d ${POSTGRES_DB:-mytasklists}"]
       interval: 5s
+      start_period: 30s
+      start_interval: 1s
       timeout: 5s
       retries: 20
     networks: [lc-net]
@@ -68,6 +70,8 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
+      start_period: 30s
+      start_interval: 1s
       timeout: 3s
       retries: 20
     networks: [lc-net]
@@ -209,6 +213,7 @@ services:
       timeout: 5s
       retries: 20
       start_period: 40s
+      start_interval: 1s
     networks: [lc-net]
     logging: *default-logging
 
@@ -229,6 +234,8 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/app/"]
       interval: 10s
+      start_period: 30s
+      start_interval: 1s
       timeout: 5s
       retries: 10
     networks: [lc-net]
@@ -248,6 +255,8 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/dashboard/"]
       interval: 10s
+      start_period: 30s
+      start_interval: 1s
       timeout: 5s
       retries: 10
     networks: [lc-net]
@@ -275,6 +284,8 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 10s
+      start_period: 30s
+      start_interval: 1s
       timeout: 5s
       retries: 10
     networks: [lc-net]
@@ -303,6 +314,8 @@ services:
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
       interval: 10s
+      start_period: 30s
+      start_interval: 1s
       timeout: 5s
       retries: 10
     networks: [lc-net]

@@ -73,24 +73,6 @@ jobs:
       - run: npm ci --prefix apps/mobile --no-audit --no-fund
       - run: node scripts/audit-dependencies.mjs
 
-  # Actualiza la caché de capas de la pila de e2e. Va en su propio job porque
-  # exportarla tarda ~30 s y, dentro de un shard, alargaba todo el CI.
-  cache-pila:
-    name: Caché de la pila
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      # Expone el token de la caché de GitHub a buildx (type=gha)
-      - uses: crazy-max/ghaction-github-runtime@v4
-      - run: |
-          cp .env.example .env
-          args=()
-          for svc in $(docker compose config --format json | jq -r '.services | to_entries[] | select(.value.build) | .key'); do
-            args+=(--set "$svc.cache-from=type=gha,scope=e2e-$svc" --set "$svc.cache-to=type=gha,mode=max,scope=e2e-$svc")
-          done
-          docker buildx bake -f docker-compose.yml "${args[@]}"
-
   # No espera al job de build: la pila se construye aquí y los shards arrancan a la
   # vez que él. La app móvil no se prueba en CI (solo en local, a pedido).
   e2e-shards:
@@ -115,21 +97,16 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - uses: docker/setup-buildx-action@v4
-      # Expone el token de la caché de GitHub a buildx (type=gha)
-      - uses: crazy-max/ghaction-github-runtime@v4
-
       # La pila se construye en segundo plano mientras se instalan las dependencias.
-      # Las imágenes salen de la caché de capas, que actualiza el job cache-pila.
+      # Lo que más tarda es esperar los healthchecks: docker-compose.yml los
+      # comprueba cada segundo mientras arrancan (start_interval).
       - name: Construir y levantar la pila
+        env:
+          DOCKER_BUILDKIT: 1
+          COMPOSE_DOCKER_CLI_BUILD: 1
         run: |
           cp .env.example .env
-          project=$(docker compose config --format json | jq -r .name)
-          args=()
-          for svc in $(docker compose config --format json | jq -r '.services | to_entries[] | select(.value.build) | .key'); do
-            args+=(--set "$svc.tags=$project-$svc" --set "$svc.cache-from=type=gha,scope=e2e-$svc")
-          done
-          ({ docker buildx bake -f docker-compose.yml --load "${args[@]}" && docker compose up -d --wait; } > compose-up.log 2>&1; echo $? > compose-up.exit) &
+          (docker compose up -d --build --wait > compose-up.log 2>&1; echo $? > compose-up.exit) &
 
       - run: npm ci --no-audit --no-fund
 
