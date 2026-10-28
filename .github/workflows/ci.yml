@@ -180,17 +180,22 @@ jobs:
             target: runtime
             build_args: |
               KEEP_SEED=false
+              RELEASE_SHA=${{ github.sha }}
           - name: frontend
             file: apps/frontend/Dockerfile
             context: .
             build_args: |
               VITE_API_URL=/api
               VITE_SOCKET_URL=/
+              VITE_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+              VITE_RELEASE_SHA=${{ github.sha }}
           - name: dashboard
             file: apps/dashboard/Dockerfile
             context: .
             build_args: |
               VITE_API_URL=/api
+              VITE_SENTRY_DSN=${{ vars.SENTRY_DSN }}
+              VITE_RELEASE_SHA=${{ github.sha }}
           - name: landing
             file: apps/landing/Dockerfile
             context: apps/landing

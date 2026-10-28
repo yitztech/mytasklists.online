@@ -32,7 +32,9 @@ RUN npm ci --workspace @lista/backend --omit=dev --no-audit --no-fund \
 
 # ────────────────────── Etapa 4: imagen final ──────────────────────
 FROM node:24-alpine AS runtime
-ENV NODE_ENV=production
+# Commit de la imagen: release de los errores en Bugsink (AUDITORIA INT-07)
+ARG RELEASE_SHA=local
+ENV NODE_ENV=production RELEASE_SHA=$RELEASE_SHA
 WORKDIR /app/apps/backend
 
 RUN apk add --no-cache tini \
