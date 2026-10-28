@@ -46,7 +46,7 @@ del repositorio**:
 Lo que se corrigió en esta revisión para que producción no arrastre cosas de desarrollo:
 
 - **Seeds fuera de la imagen.** `dist/database/seeds` (usuarios y listas de demostración con contraseñas públicas)
-  ya no se publica: el Dockerfile del backend acepta `KEEP_SEED=false` y `deploy.yml` lo usa. En desarrollo
+  ya no se publica: el Dockerfile del backend acepta `KEEP_SEED=false` y el job `publicar` de `ci.yml` lo usa. En desarrollo
   se conserva (`KEEP_SEED=true` por defecto). El import de los seeds ahora es dinámico, así que el backend no
   los necesita si `RUN_SEED` está apagado; además el arranque se niega a iniciar con `RUN_SEED=true` en producción.
 - **Sin sourcemaps** (`*.map`) en ninguna imagen: `dist/` pasó de ≈ 1 MB a ≈ 0,5 MB.
@@ -67,18 +67,19 @@ caracteres, `RUN_SEED` activo, CORS con `*` o sin contraseña de Redis (`apps/ba
 ```
 git push a main
   └─ .github/workflows/ci.yml       → impacto, tipos, build y pruebas e2e (no despliega)
-  └─ .github/workflows/deploy.yml
-        verificar  → tipos + build + "¿rompe a la app móvil?" (scripts/impact.mjs)
-        publicar   → 5 imágenes a ghcr.io/yprevot/mytasklists.online-<servicio>:{main,<sha>}
-        desplegar  → POST al webhook de Coolify → espera a que /version.json sirva el <sha>
+        publicar   → 5 imágenes a ghcr.io/yprevot/mytasklists.online-<servicio>:<sha>, en paralelo con e2e
+  └─ .github/workflows/deploy.yml   (cuando CI termina en verde)
+        verificar  → CI del SHA exacto + "¿rompe a la app móvil?" (scripts/impact.mjs)
+        desplegar  → exige las 5 imágenes, fija IMAGE_TAG, POST al webhook de Coolify → espera a que
+                     /version.json sirva el <sha>
 ```
 
-Coolify recibe el aviso, descarga las imágenes `:main` y reinicia los servicios de `compose.prod.yml`. Cada
+Coolify recibe el aviso, descarga las imágenes `:<sha>` (`IMAGE_TAG`) y reinicia los servicios de `compose.prod.yml`. Cada
 redespliegue corta el sitio aproximadamente un minuto (Coolify detiene y arranca los contenedores); el workflow lo
 tolera y reintenta hasta 10 minutos. Las migraciones de base de datos corren solas al arrancar el backend
 (`RUN_MIGRATIONS=true`) y deben ser compatibles con la versión anterior (ver `docs/COMPATIBILIDAD.md`).
 
-`deploy.yml` no publica ni despliega hasta que exista la variable de repositorio `DEPLOY_ENABLED=true`:
+Ni CI publica ni `deploy.yml` despliega hasta que exista la variable de repositorio `DEPLOY_ENABLED=true`:
 puedes fusionar a `main` mientras terminas la configuración.
 
 ## 4. Lo que necesito de este lado (lista de verificación)
@@ -143,7 +144,7 @@ repositorio es privado, para registrar la *deploy key* con la que Coolify lo lee
 
 ### 5.2 Imágenes privadas en GHCR (`ghcr_pull_token`)
 
-El workflow publica con el `GITHUB_TOKEN` automático (permiso `packages: write`): no necesita token tuyo. Las imágenes
+CI publica con el `GITHUB_TOKEN` automático (permiso `packages: write`): no necesita token tuyo. Las imágenes
 son **privadas**, así que el servidor tiene que autenticarse para descargarlas. El playbook hace `docker login ghcr.io`
 en VPS1 con `ghcr_pull_token`. GHCR no acepta tokens *fine-grained*: tiene que ser uno clásico.
 
@@ -367,8 +368,9 @@ La política de privacidad debe mencionar la analítica (sin cookies) y el bolet
 4. `--tags web` con `cliente_web_publicar: false`: crea la app en Coolify, la deploy key y el `docker login` en GHCR, sin desplegar.
 5. `cliente_web_publicar: true` y `--tags web` otra vez: el playbook crea el entorno `production` y guarda
    `COOLIFY_WEBHOOK`, `COOLIFY_TOKEN` y `SITE_URL`. **Solo entonces** pon `DEPLOY_ENABLED=true` (variable del repositorio, 5.4).
-6. Ejecuta **Desplegar** (Actions → Desplegar → Run workflow, o `-e redeploy=true` en el playbook): publica las imágenes
-   privadas y Coolify las descarga con `ghcr_pull_token` (5.2).
+6. Vuelve a ejecutar el **CI** de la punta de `main` (Actions → CI → Re-run): publica las imágenes privadas y, al
+   terminar en verde, lanza **Desplegar**; Coolify las descarga con `ghcr_pull_token` (5.2). Si las imágenes del SHA ya
+   existen, basta con **Desplegar** (Run workflow, o `-e redeploy=true` en el playbook).
 7. Mide `TRUSTED_PROXY_CIDR` (6.3), acótalo en la ficha, `--tags web` y vuelve a ejecutar **Desplegar**.
 8. Verifica:
    ```bash
