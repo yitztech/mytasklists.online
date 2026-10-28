@@ -11,7 +11,7 @@ exactamente ese código. Los scripts de build y CI lo comprueban y se niegan a c
 
 ```sh
 npm run up                    # pila local (API, base de datos, Mailpit) en http://localhost:8084
-npm run mobile:test           # iOS: simulador «iPhone 17»
+npm run mobile:test           # iOS: primer simulador de iPhone instalado
 npm run mobile:test:android   # Android: emulador «Medium_Tablet» (API 35)
 ```
 
