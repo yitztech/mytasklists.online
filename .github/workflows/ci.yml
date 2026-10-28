@@ -1,5 +1,6 @@
 # Se ejecuta en cada PR y en cada push a main. No despliega nada: dice qué impacto
 # tiene el cambio, bloquea lo que rompe a las apps publicadas y corre las pruebas.
+# En main publica además las imágenes del SHA, que despliega deploy.yml.
 name: CI
 
 on:
@@ -96,14 +97,24 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      # La pila se construye en segundo plano mientras se instalan las dependencias
+      - uses: docker/setup-buildx-action@v4
+      # Expone el token de la caché de GitHub a buildx (type=gha)
+      - uses: crazy-max/ghaction-github-runtime@v4
+
+      # La pila se construye en segundo plano mientras se instalan las dependencias.
+      # Las imágenes salen de la caché de capas; solo el shard 1 la actualiza.
       - name: Construir y levantar la pila
         env:
-          DOCKER_BUILDKIT: 1
-          COMPOSE_DOCKER_CLI_BUILD: 1
+          WRITE_CACHE: ${{ matrix.shard == '1/4' }}
         run: |
           cp .env.example .env
-          (docker compose up -d --build --wait > compose-up.log 2>&1; echo $? > compose-up.exit) &
+          project=$(docker compose config --format json | jq -r .name)
+          args=()
+          for svc in $(docker compose config --format json | jq -r '.services | to_entries[] | select(.value.build) | .key'); do
+            args+=(--set "$svc.tags=$project-$svc" --set "$svc.cache-from=type=gha,scope=e2e-$svc")
+            if [ "$WRITE_CACHE" = true ]; then args+=(--set "$svc.cache-to=type=gha,mode=max,scope=e2e-$svc"); fi
+          done
+          ({ docker buildx bake -f docker-compose.yml --load "${args[@]}" && docker compose up -d --wait; } > compose-up.log 2>&1; echo $? > compose-up.exit) &
 
       - run: npm ci --no-audit --no-fund
 
@@ -143,6 +154,80 @@ jobs:
             compose-up.log
           if-no-files-found: ignore
           retention-days: 7
+
+  # Imágenes de producción del SHA, en paralelo con las pruebas. Publicarlas antes de
+  # que CI termine no las despliega: verify-release.mjs y el comando de release del
+  # servidor exigen CI aprobado del SHA exacto antes de fijar IMAGE_TAG.
+  publicar:
+    name: Publicar ${{ matrix.name }}
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # KEEP_SEED=false: la imagen de producción no lleva datos de demostración
+          - name: backend
+            file: apps/backend/Dockerfile
+            context: .
+            target: runtime
+            build_args: |
+              KEEP_SEED=false
+          - name: frontend
+            file: apps/frontend/Dockerfile
+            context: .
+            build_args: |
+              VITE_API_URL=/api
+              VITE_SOCKET_URL=/
+          - name: dashboard
+            file: apps/dashboard/Dockerfile
+            context: .
+            build_args: |
+              VITE_API_URL=/api
+          - name: landing
+            file: apps/landing/Dockerfile
+            context: apps/landing
+            build_args: |
+              LANDING_PUBLIC_URL=${{ vars.LANDING_PUBLIC_URL || 'https://mytasklists.online' }}
+              LANDING_NOINDEX=${{ vars.LANDING_NOINDEX || 'false' }}
+              LANDING_IOS_URL=${{ vars.LANDING_IOS_URL || '#descargar' }}
+              LANDING_ANDROID_URL=${{ vars.LANDING_ANDROID_URL || '#descargar' }}
+              LANDING_LEGAL_NAME=${{ vars.LANDING_LEGAL_NAME }}
+              LANDING_LEGAL_ADDRESS=${{ vars.LANDING_LEGAL_ADDRESS }}
+              LANDING_PRIVACY_EMAIL=${{ vars.LANDING_PRIVACY_EMAIL }}
+          - name: gateway
+            file: infra/nginx/gateway/Dockerfile
+            context: .
+            build_args: |
+              RELEASE_SHA=${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # GHCR exige minúsculas en el nombre de la imagen
+      - id: image
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "name=ghcr.io/${REPOSITORY,,}-${{ matrix.name }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          target: ${{ matrix.target }}
+          push: true
+          build-args: ${{ matrix.build_args }}
+          tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: true
+          sbom: true
 
   e2e:
     name: Pruebas e2e
