@@ -26,7 +26,7 @@ La política Restic incluye `/var/lib/docker/volumes/*_item-images/_data`, los v
 
 ## Dependencias móviles
 
-`uuid` transitivo de Xcode se fija a 11.1.1 y se valida compilando el APK. Las herramientas de Expo usan `node-forge` 1.4.2 (fuera de [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv)) y `zod` 4.6.7 mediante un override en `apps/mobile/package.json`, porque `@expo/cli` 57 aún pide `^3.25.76` y el arreglo de [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) es 4.6.6. Retirar el override cuando Expo declare zod 4. `deepmerge` 4.3.1 ([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), severidad baja) no tiene versión corregida; su excepción de herramientas es exacta y caduca el 31 de octubre; otros avisos bloquean CI. El APK directo tiene OTA desactivado. Ejecutar `node scripts/audit-dependencies.mjs` después de actualizar.
+`uuid` transitivo de Xcode se fija a 11.1.1 y se valida compilando el APK. Las herramientas de Expo usan `node-forge` 1.4.2 (fuera de [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv)) y `zod` 4.6.7 mediante un override en `apps/mobile/package.json`, porque `@expo/cli` 57 aún pide `^3.25.76` y el arreglo de [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) es 4.6.6. Retirar el override cuando Expo declare zod 4. `deepmerge` 4.3.1 ([GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4), severidad baja) no tiene versión corregida; su excepción de herramientas es exacta y caduca el 30 de noviembre; otros avisos bloquean CI. El APK directo tiene OTA desactivado. Ejecutar `node scripts/audit-dependencies.mjs` después de actualizar.
 
 ## Aislamiento de red en Coolify
 
