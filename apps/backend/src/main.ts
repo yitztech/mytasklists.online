@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+// Primero: Sentry se inicializa antes de cargar el resto de módulos
+import { JsonLogger, log, requestId } from './common/observability/observability';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -24,8 +26,13 @@ async function bootstrap(): Promise<void> {
     AppModule,
     // trustProxy: solo nginx (1 salto) puede fijar X-Forwarded-For; así la IP que
     // usa el rate limiting no se puede falsear desde el cliente.
-    new FastifyAdapter({ trustProxy, bodyLimit: early.bodyLimit }),
-    { bufferLogs: false, rawBody: true },
+    new FastifyAdapter({
+      trustProxy,
+      bodyLimit: early.bodyLimit,
+      genReqId: (req) => requestId(req.headers['x-request-id']),
+    }),
+    // Logs en JSON (AUDITORIA BE-22)
+    { bufferLogs: false, rawBody: true, logger: new JsonLogger() },
   );
 
   const config = app.get(ConfigService);
@@ -33,6 +40,26 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('port', 3000);
   const origins = config.get<string[]>('corsOrigins', []);
   const swaggerEnabled = config.get<boolean>('swaggerEnabled', false);
+
+  // X-Request-ID en cada respuesta y una línea por petición (BE-22). La salud se consulta cada
+  // pocos segundos y queda fuera.
+  const fastify = app.getHttpAdapter().getInstance();
+  fastify.addHook('onRequest', async (request, reply) => {
+    reply.header('X-Request-ID', request.id);
+  });
+  fastify.addHook('onResponse', async (request, reply) => {
+    const path = request.url.split('?')[0];
+    if (path === `/${prefix}/health`) return;
+    let level: 'warn' | 'info' = 'info';
+    if (reply.statusCode >= 500) level = 'warn';
+    log(level, 'request', {
+      requestId: request.id,
+      method: request.method,
+      path,
+      status: reply.statusCode,
+      durationMs: Math.round(reply.elapsedTime),
+    });
+  });
 
   await app.register(fastifyCookie as any);
   await app.register(multipart, { limits: { files: 1, fileSize: 5 * 1024 * 1024, fields: 2, fieldSize: 4096, parts: 3 } });

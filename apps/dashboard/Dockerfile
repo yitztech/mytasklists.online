@@ -4,7 +4,12 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 ARG VITE_API_URL=/api
-ENV VITE_API_URL=$VITE_API_URL
+# Registro de errores (AUDITORIA INT-07): DSN pública de la variable SENTRY_DSN; vacía = apagado
+ARG VITE_SENTRY_DSN=""
+ARG VITE_RELEASE_SHA=local
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_SENTRY_DSN=$VITE_SENTRY_DSN \
+    VITE_RELEASE_SHA=$VITE_RELEASE_SHA
 
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json   apps/backend/

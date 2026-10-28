@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { localeFromHeader, translateMessage } from '../../i18n/locale';
+import { reportError } from '../observability/observability';
 
 /** Normaliza todas las respuestas de error de la API */
 @Catch()
@@ -41,6 +42,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else if (exception instanceof Error) {
       this.logger.error(exception.message, exception.stack);
     }
+    // Los 5xx y las excepciones no controladas van a Bugsink (AUDITORIA INT-07); los 4xx esperados, no
+    if (status >= 500) reportError(exception, request?.id);
 
     // Los mensajes se escriben en español; si la petición llega en inglés se traducen
     const locale = localeFromHeader(request?.headers?.['accept-language']);
