@@ -52,6 +52,11 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      # Mientras arranca se comprueba cada segundo: Traefik no le envía tráfico
+      # hasta que está healthy, así que esto acorta el corte de cada despliegue.
+      # start_interval exige Docker Engine ≥ 25 (VPS: 29.9).
+      start_period: 20s
+      start_interval: 1s
     networks: [frontend]
 
   # Espacio de red de la API, como un pod: backend, postgres y redis lo comparten
@@ -195,6 +200,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+      start_interval: 1s
     network_mode: service:backend-net
 
   frontend:
@@ -244,6 +250,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+      start_period: 30s
+      start_interval: 1s
     network_mode: service:backend-net
 
   redis:
@@ -264,6 +272,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 20
+      start_period: 30s
+      start_interval: 1s
     network_mode: service:backend-net
 
 volumes:
