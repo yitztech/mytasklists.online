@@ -6,6 +6,9 @@ import * as Sentry from '@sentry/node';
 
 type Level = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
+// Fuera de los ternarios: el control de i18n toma sus literales por textos de interfaz
+const isText = (value: unknown): value is string => typeof value === 'string';
+
 export function log(level: Level, msg: string, fields: Record<string, unknown> = {}): void {
   process.stdout.write(JSON.stringify({ time: new Date().toISOString(), level, msg, ...fields }) + '\n');
 }
@@ -34,14 +37,10 @@ export class JsonLogger implements LoggerService {
   // Nest pasa el contexto como último argumento y, en error(), la traza antes que él
   private write(level: Level, message: unknown, rest: unknown[]): void {
     const args = [...rest];
-    const context = args.length && typeof args[args.length - 1] === 'string' ? (args.pop() as string) : undefined;
-    const stack =
-      level === 'error' && typeof args[0] === 'string'
-        ? (args.shift() as string)
-        : message instanceof Error
-          ? message.stack
-          : undefined;
-    const msg = message instanceof Error ? message.message : typeof message === 'string' ? message : JSON.stringify(message);
+    const context = args.length && isText(args[args.length - 1]) ? (args.pop() as string) : undefined;
+    const nestTrace = level === 'error' && isText(args[0]);
+    const stack = nestTrace ? (args.shift() as string) : message instanceof Error ? message.stack : undefined;
+    const msg = message instanceof Error ? message.message : isText(message) ? message : JSON.stringify(message);
     log(level, msg, { ...(context && { context }), ...(stack && { stack }) });
   }
 }
@@ -77,5 +76,5 @@ export function reportError(error: unknown, requestId?: string): void {
 // X-Request-ID del gateway si parece un identificador; si no, uno nuevo
 const REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
 export function requestId(header: unknown): string {
-  return typeof header === 'string' && REQUEST_ID.test(header) ? header : randomUUID();
+  return isText(header) && REQUEST_ID.test(header) ? header : randomUUID();
 }

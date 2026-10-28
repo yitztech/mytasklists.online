@@ -50,7 +50,9 @@ async function bootstrap(): Promise<void> {
   fastify.addHook('onResponse', async (request, reply) => {
     const path = request.url.split('?')[0];
     if (path === `/${prefix}/health`) return;
-    log(reply.statusCode >= 500 ? 'warn' : 'info', 'request', {
+    let level: 'warn' | 'info' = 'info';
+    if (reply.statusCode >= 500) level = 'warn';
+    log(level, 'request', {
       requestId: request.id,
       method: request.method,
       path,
