@@ -1,16 +1,10 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
-// Exact, expiring toolchain exceptions: upstream has no patched release (node-forge as of 2026-10-01,
-// braces as of 2026-10-11; braces only parses Metro/Expo CLI build globs, never app input;
-// zod as of 2026-10-24: only @expo/cli 57 uses it, pinned to ^3.25.76 while the fix is 4.6.6,
-// and it only validates CLI config, never app input; deepmerge as of 2026-10-27, low severity: only
-// @expo/config 57 merges the project's own app config with it, never app input).
+// Exact, expiring toolchain exceptions: upstream has no patched release (deepmerge as of 2026-10-27,
+// low severity: only @expo/config 57 merges the project's own app config with it, never app input).
 // They do not suppress new advisories, package changes or the backend dependency audit.
 const accepted = new Map([
-  ['GHSA-86w9-cpqp-85rv', {name:'node-forge', until:'2026-10-31'}],
-  ['GHSA-vfj7-8cjw-p6xm', {name:'braces', until:'2026-10-31'}],
-  ['GHSA-mrhx-c7xc-m3w5', {name:'zod', until:'2026-10-31'}],
   ['GHSA-gcqx-w48m-w2h4', {name:'deepmerge', until:'2026-10-31'}],
 ]);
 let failed=false;

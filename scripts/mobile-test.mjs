@@ -2,7 +2,7 @@
 /**
  * Pruebas de la app nativa en un simulador local (solo desarrollo, a pedido).
  *
- *   npm run mobile:test                       iOS, simulador «iPhone 17»
+ *   npm run mobile:test                       iOS, primer simulador de iPhone instalado
  *   npm run mobile:test -- --platform android  emulador «Medium_Tablet» (API 35)
  *   opciones: --device <nombre>  --rebuild  --web (además, la app en el navegador)
  *
@@ -98,9 +98,11 @@ async function createAccount() {
 }
 
 // ── 3. Simulador ───────────────────────────────────────────────────────────
-async function bootIos(name = 'iPhone 17') {
+// Sin --device, el primer iPhone instalado: los nombres cambian con cada Xcode.
+async function bootIos(requested) {
   const devices = Object.values(JSON.parse(sh('xcrun', ['simctl', 'list', 'devices', 'available', '-j'])).devices).flat();
-  const device = devices.find((item) => item.name === name);
+  const device = requested ? devices.find((item) => item.name === requested) : devices.find((item) => item.name.startsWith('iPhone'));
+  const name = device?.name ?? requested ?? 'iPhone';
   if (!device) throw new Error(`No hay un simulador «${name}». Disponibles: ${[...new Set(devices.map((item) => item.name))].join(', ')}`);
   if (device.state !== 'Booted') {
     log(`arrancando el simulador ${name}…`);

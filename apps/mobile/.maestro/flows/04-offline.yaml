@@ -56,9 +56,11 @@ name: Offline · consultar listas y guardar cambios sin conexión
       - tapOn:
           id: item-checkbox
 
+# Hasta el botón que se pulsa, no hasta la fila: en tableta la fila asoma por el
+# borde inferior con el botón todavía fuera de la pantalla.
 - scrollUntilVisible:
     element:
-      id: purchased-item
+      id: purchased-close
     direction: DOWN
     timeout: 20000
 
